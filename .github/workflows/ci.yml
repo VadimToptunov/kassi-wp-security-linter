@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Test & verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Free disk space
+        # The Plugin Verifier downloads two full PhpStorm distributions; without this the runner
+        # can die mid-download with no log.
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force || true
+          df -h /
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Test (core + PHP PSI fixtures)
+        run: ./gradlew test --stacktrace
+      - name: Verify plugin structure
+        run: ./gradlew verifyPluginStructure --stacktrace
+      - name: Plugin Verifier (PhpStorm 2025.3 floor + newest)
+        run: ./gradlew verifyPlugin --stacktrace
+      - name: Build plugin
+        run: ./gradlew buildPlugin --stacktrace
+      - name: Upload plugin distribution
+        # Convenience artifact only; never fail CI on it (Actions storage quota lags).
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-distribution
+          path: plugin/build/distributions/*.zip
+          retention-days: 5

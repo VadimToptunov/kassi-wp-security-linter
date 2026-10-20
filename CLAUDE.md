@@ -1,0 +1,48 @@
+# Kassi Security Inspections for WordPress (kassi-wp-security-linter)
+
+PhpStorm plugin: deterministic, offline static security inspections for WordPress plugin/theme
+code. The full build spec is the "Kassi WP Security Linter — build prompt"; the decisions it left
+open are recorded in `DECISIONS.md`.
+
+## Hard rules
+- **No runtime network calls, no telemetry, no runtime LLM.** Never "AI-powered" in any text.
+- **Precision over coverage.** A false positive is a higher-priority bug than a miss. If a flow is
+  not proven, the inspection stays silent.
+- **Rules are data.** Sources, sanitizers and sinks live in YAML (the `kassi-wp-rules` repo); code
+  reads them. Only YAML-listed functions count as sanitizers.
+- `core/` imports nothing from IntelliJ, the PHP plugin or `plugin/` (`ModuleBoundaryTest`).
+  `core` analyses run over `core.ast.AstNode`; `plugin/psi/PhpPsiAstNode` is the PSI adapter.
+- No rules outside the v0.1 list (WP-001..WP-008); everything else goes in `BACKLOG.md`.
+- Never weaken a rule to pass the corpus; tighten it or log the case in `FALSE_POSITIVES.md`.
+- No schema change without updating the validator and its tests.
+- No `@Deprecated` platform API; check the SDK docs, not memory.
+- Don't copy WPCS/PHPCS sniff code.
+- Work in stages; after each stage, stop and report (done / failed / decisions made).
+- No AI attribution in commits, PRs or files.
+
+## Commands
+```
+./gradlew test                    # core unit tests + PHP PSI fixture tests
+./gradlew verifyPluginStructure   # plugin.xml / descriptor structure
+./gradlew verifyPlugin            # Plugin Verifier vs PhpStorm 2025.3 and newest (slow, downloads IDEs)
+./gradlew buildPlugin             # plugin/build/distributions/*.zip
+./gradlew runIde                  # sandbox PhpStorm with the plugin
+```
+Versions are pinned in `gradle.properties` with their source. Re-check them upstream before bumping.
+
+## Layout
+- `core/`: pure Kotlin. `ast/` (AstNode + traversal), `model/` (Rule), and from later stages
+  `kb/` (YAML loader + validator) and `flow/` (intra-procedural taint).
+- `plugin/`: `psi/` (adapter), plus `inspections/`, `fixes/`, `report/` and `settings/` from later stages.
+- `rules/`: git submodule → `kassi-wp-rules` (public, CC BY 4.0), added in Stage 1.
+- `corpus/`: false-positive run script (20 popular plugins), Stage 4. CVE cases live in `kassi-wp-corpus`.
+
+## Definition of done (per inspection)
+1. `plugin/src/test/testData/<rule-id>/` fixtures: positive, negative, sanitizer, and the
+   nopriv/GET exception where applicable (`<warning descr="...">` markup).
+2. `inspectionDescriptions/<Name>.html` with vulnerable + fixed examples.
+3. Registered in `plugin.xml` with `groupName="Kassi WordPress Security"`.
+4. YAML rule with `cwe`, `references` (real CVE), `precision_notes`.
+5. Corpus run: zero unexplained findings; disputed ones go in `FALSE_POSITIVES.md`.
+6. At least one `kassi-wp-corpus` case: `vulnerable.php` flagged, `fixed.php` silent.
+7. `./gradlew test verifyPlugin` green.

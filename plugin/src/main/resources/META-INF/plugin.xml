@@ -1,0 +1,20 @@
+<idea-plugin>
+    <id>io.github.vadimtoptunov.kassi-wp-security</id>
+    <name>Kassi Security Inspections for WordPress</name>
+    <vendor email="vtoptunov88@gmail.com" url="https://github.com/VadimToptunov">Vadim Toptunov</vendor>
+
+    <description><![CDATA[
+    <p>Static security inspections for WordPress plugin and theme code in PhpStorm: missing capability
+    and nonce checks in admin/AJAX handlers, REST routes without a permission callback, unprepared SQL,
+    unescaped output, unsafe file paths and unsafe redirects.</p>
+    <p>Deterministic and fully offline: no network calls, no telemetry. Every rule maps to a CWE and is
+    backed by a real, fixed CVE from the WordPress plugin ecosystem.</p>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.jetbrains.php</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Inspections are registered per stage with groupName="Kassi WordPress Security". -->
+    </extensions>
+</idea-plugin>
