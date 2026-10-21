@@ -1,0 +1,27 @@
+<html>
+<body>
+<p>Reports request data (<code>$_GET</code>, <code>$_POST</code>, <code>$_REQUEST</code>, <code>$_COOKIE</code>,
+<code>WP_REST_Request</code> parameters, …) that reaches the SQL text of a <code>$wpdb</code> query method
+(<code>query</code>, <code>get_results</code>, <code>get_var</code>, <code>get_row</code>, <code>get_col</code>)
+through assignments, concatenation or string interpolation, without <code>$wpdb-&gt;prepare()</code>
+placeholders (CWE-89, SQL Injection).</p>
+<p><code>sanitize_text_field()</code> and <code>wp_unslash()</code> do not make a value safe for SQL.
+Input concatenated into the <em>format string</em> of <code>prepare()</code> is reported too:
+<code>prepare()</code> escapes only the values passed for its placeholders.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>$id = sanitize_text_field( $_GET['id'] );
+$row = $wpdb-&gt;get_row( "SELECT * FROM {$wpdb-&gt;prefix}orders WHERE id = '$id'" );</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>$id = absint( $_GET['id'] );
+$row = $wpdb-&gt;get_row(
+    $wpdb-&gt;prepare( "SELECT * FROM {$wpdb-&gt;prefix}orders WHERE id = %d", $id )
+);</code></pre>
+
+<p>The flow is followed inside one function only. The inspection stays silent when the value passes
+through a function it does not know, comes from a parameter, or is cast to a number.</p>
+<!-- tooltip end -->
+<p>Rule WP-005 · CWE-89 · see the kassi-wp-rules repository for references.</p>
+</body>
+</html>

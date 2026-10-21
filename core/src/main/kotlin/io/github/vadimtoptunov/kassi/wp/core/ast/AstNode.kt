@@ -97,6 +97,11 @@ enum class AstKind {
     INCLUDE,
     RETURN,
     IF,
+    /**
+     * `foreach (expr as $k => $v)`. [AstRole.VALUE] = the iterated expression, [AstRole.KEY] = `$k`
+     * (null when absent), [AstRole.TARGET] = `$v`.
+     */
+    FOREACH,
     /** `{ ... }` statement group / function body. */
     BLOCK,
     /** Function or method parameter. [AstNode.name] = parameter name without `$`. */

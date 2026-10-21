@@ -114,4 +114,15 @@ class PhpPsiAstNodeTest : BasePlatformTestCase() {
         assertEquals(listOf(AstKind.NUMBER_LITERAL, AstKind.VARIABLE), list.arguments.map { it.child(AstRole.VALUE)?.kind })
         assertEquals(listOf(null, null), list.arguments.map { it.child(AstRole.KEY) })
     }
+
+    fun testExpressionsEmbeddedInStringsAreUnwrapped() {
+        val root = parse("<?php\n${'$'}q = \"s='{${'$'}_REQUEST['k']}' x=${'$'}y[1] z={${'$'}o->p} w=${'$'}v\";\n")
+        val str = root.first(AstKind.INTERPOLATED_STRING)
+        assertEquals(
+            listOf(AstKind.ARRAY_ACCESS, AstKind.ARRAY_ACCESS, AstKind.PROPERTY_ACCESS, AstKind.VARIABLE),
+            str.children.map { it.kind },
+        )
+        assertEquals("_REQUEST", str.children[0].child(AstRole.RECEIVER)?.name)
+        assertEquals(str, str.children[0].parent)
+    }
 }

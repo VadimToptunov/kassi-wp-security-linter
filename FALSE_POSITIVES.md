@@ -40,3 +40,12 @@ counts. Missing callbacks on write routes stay a full warning (zero hits in this
 | wordfence@9.0.2 | `lib/rest-api/wfRESTAuthenticationController.php:36` | `POST wordfence/v1/authenticate` | Central-service handshake; the handler verifies a signed nonce |
 | wordpress-seo@28.7 | `src/ai/authorization/user-interface/callback-route.php:56` | `POST` AI OAuth callback | The handler checks the code verifier |
 | wordpress-seo@28.7 | `src/ai/authorization/user-interface/refresh-callback-route.php:56` | `POST` AI OAuth refresh callback | The handler checks the code verifier |
+
+## WP-005, WP-006, WP-008: run of 2026-10-21 (same top-20 plugins, 4,765 files scanned)
+
+| Rule | Plugin | Location | Finding | Decision |
+| --- | --- | --- | --- | --- |
+| WP-005 | litespeed-cache@7.9.2 | `src/db-optm.cls.php:505` | `$_GET['litespeed_tb']` in `ALTER TABLE` | **Rule tightened.** The value is used only after `in_array($tb_param, $names, true)`, an allow-list of existing tables. The flow engine now understands allow-list guards (`params.guard_functions`): inside `if (guard($x))` and after `if (!guard($x)) { return/exit/wp_die; }`. Silent since then. |
+| WP-008 | woocommerce@11.2.1 | `includes/admin/helper/class-wc-helper.php:1205` | `wp_redirect( wp_unslash( $_GET['wccom-install-url'] ) )` | **Kept (true pattern, hard to exploit).** The handler is gated by `wp_verify_nonce( $_GET['wc-helper-nonce'], 'connect' )` and an OAuth token exchange, so it cannot be used as a phishing link. The URL is still unvalidated; `wp_safe_redirect()` with an allowed-hosts filter would be correct. |
+
+WP-006 produced no findings in this run.
