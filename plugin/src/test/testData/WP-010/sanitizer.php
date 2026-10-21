@@ -24,3 +24,9 @@ function s_constant_base($request) {
 function s_sprintf_base($req) {
     wp_remote_get(sprintf('%s/rest/v1.1/sites/%d/posts?%s', S_API_BASE, 7, http_build_query($req->get_params())));
 }
+
+function s_validate_guard() {
+    $url = wp_unslash($_POST['u']);
+    if (!wp_http_validate_url($url)) { return; }
+    wp_remote_get($url);
+}

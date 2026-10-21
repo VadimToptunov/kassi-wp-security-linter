@@ -105,3 +105,24 @@ The first run gave 7 findings. Three tightenings followed (none weakens a rule):
 | Rule | Plugin | Location | Decision |
 | --- | --- | --- | --- |
 | WP-011 | contact-form-7@6.2.2 | `includes/file.php:65` | **Accepted false positive (cross-function check).** The file type is validated in the file form-tag's validation filter in another file. The name also goes through `wpcf7_antiscript_file_name()`, and the upload folder is protected. The rule sees checks only in the same function. A CF7-specific pattern was not added to the rule. |
+
+## Long-tail run (138 plugins, 2026-10-22)
+
+See VALIDATION.md for the method and the before/after numbers. These mechanisms were fixed by
+tightening the rules:
+
+| Mechanism (count in triage) | Change |
+| --- | --- |
+| Capability/nonce check in a helper with a recognisable name (12) | Wildcard patterns: `*guard*`, `*verify_access*`, `*check*access*`, `*check*permission*`, `*has*capabilit*`, `*authorize*` (WP-001/003), and for WP-002 `*check*access*`, `*verify_access*`, `*verify_request*`, `*security_check*` |
+| Registration-time guard (4) | `add_action` inside `if (<check>)`, or after `if (!<check>) { return / die / wp_send_json_error }` in the registering function, counts as checked. A check in an unrelated branch does not count (regression fixture from the case that would otherwise have been lost) |
+| Notice/review/onboarding-style writes (19 TP-LOW) | `low_impact_keys`: such findings become weak |
+| Admin-only taint sinks (9) | `admin_checks`: a capability check in the same function makes WP-005/007/009/010/011/012 findings weak. WP-006 and WP-008 are excluded, because there the admin is the victim |
+| `download_url()` reported as SSRF (1) | Removed from the sinks: it already uses `wp_safe_remote_get()` |
+| `if (!wp_http_validate_url($u)) return;` not recognised (1) | Added as a WP-010 guard |
+| `$_FILES[...]['name']` treated as a traversal source (2) | Now clean for WP-007: PHP keeps only its basename |
+| Redirect to `HTTP_REFERER` (1) | No longer a WP-008 source |
+| `foreach ($atts as $k => $v) $atts[$k] = esc_attr($v)` and `array_map('esc_attr', $atts)` (1) | Recognised as cleaning the whole array |
+
+Remaining known false positives: 17 warnings in the triage sample. They are unreachable classes,
+unrecognised validators, dead branches, standalone legacy scripts and checks in other functions.
+They are accepted for v0.1 and listed in BACKLOG.md.

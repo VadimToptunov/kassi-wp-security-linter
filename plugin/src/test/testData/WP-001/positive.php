@@ -19,7 +19,7 @@ class P_Admin {
     }
 
     // Nonce only: weak (safe only while the nonce is never shown to lower roles).
-    function <weak_warning descr="Handler 'reset' (hook wp_ajax_p_reset) calls delete_option() without a capability check (current_user_can). It verifies a nonce, so it is exploitable only if that nonce reaches lower-privileged users">reset</weak_warning>() {
+    function <weak_warning descr="Handler 'reset' (hook wp_ajax_p_reset) calls delete_option() without a capability check (current_user_can). Low impact: it only writes notice/onboarding-style state, or verifies a nonce that may never reach lower-privileged users">reset</weak_warning>() {
         check_ajax_referer('p_reset');
         $this->do_reset();
     }
@@ -29,7 +29,7 @@ class P_Admin {
     }
 }
 
-add_action('wp_ajax_p_purge', <weak_warning descr="Handler closure (hook wp_ajax_p_purge) calls unlink() without a capability check (current_user_can). It verifies a nonce, so it is exploitable only if that nonce reaches lower-privileged users">function</weak_warning> () {
+add_action('wp_ajax_p_purge', <weak_warning descr="Handler closure (hook wp_ajax_p_purge) calls unlink() without a capability check (current_user_can). Low impact: it only writes notice/onboarding-style state, or verifies a nonce that may never reach lower-privileged users">function</weak_warning> () {
     check_ajax_referer('p_purge');
     unlink(WP_CONTENT_DIR . '/p.log');
 });
@@ -38,4 +38,10 @@ add_action('wp_ajax_' . 'p_role', 'p_role');
 function <warning descr="Handler 'p_role' (hook wp_ajax_p_role) calls ->set_role() without a capability check (current_user_can)">p_role</warning>() {
     $user = new WP_User((int) $_POST['user']);
     $user->set_role('editor');
+}
+
+// Low impact: only a notice-dismissal flag.
+add_action('wp_ajax_p_dismiss', 'p_dismiss');
+function <weak_warning descr="Handler 'p_dismiss' (hook wp_ajax_p_dismiss) calls update_option() without a capability check (current_user_can). Low impact: it only writes notice/onboarding-style state, or verifies a nonce that may never reach lower-privileged users">p_dismiss</weak_warning>() {
+    update_option('p_review_notice_dismissed', 1);
 }

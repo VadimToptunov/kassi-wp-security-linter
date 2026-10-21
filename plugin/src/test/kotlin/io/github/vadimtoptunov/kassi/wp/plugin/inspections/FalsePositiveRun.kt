@@ -1,11 +1,6 @@
 package io.github.vadimtoptunov.kassi.wp.plugin.inspections
 
-import com.intellij.codeInspection.InspectionManager
-import com.intellij.codeInspection.ProblemsHolder
-import com.intellij.psi.PsiFileFactory
-import com.intellij.psi.PsiRecursiveElementWalkingVisitor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.jetbrains.php.lang.PhpFileType
 import io.github.vadimtoptunov.kassi.wp.plugin.rules.BuiltInRules
 import java.io.File
 
@@ -33,22 +28,10 @@ class FalsePositiveRun : BasePlatformTestCase() {
                     val lower = text.lowercase()
                     if (needles.none { it in lower }) return@forEach
                     scanned++
-                    // Parse without indexing (real-world files can trip the stub builder in test mode)
-                    // and run the inspection's own visitor, i.e. exactly the shipped code path.
-                    val file = PsiFileFactory.getInstance(project).createFileFromText(php.name, PhpFileType.INSTANCE, text, System.currentTimeMillis(), true) // physical, not indexed
-                    val holder = ProblemsHolder(InspectionManager.getInstance(project), file, false)
-                    val visitor = tool.buildVisitor(holder, false)
-                    file.accept(object : PsiRecursiveElementWalkingVisitor() {
-                        override fun visitElement(element: com.intellij.psi.PsiElement) {
-                            element.accept(visitor)
-                            super.visitElement(element)
-                        }
-                    })
-                    holder.results.forEach { p ->
-                        val offset = p.psiElement.textRange.startOffset
-                        val line = text.substring(0, offset).count { it == '\n' } + 1
-                        val snippet = text.lines()[line - 1].trim().take(140).replace("|", "\\|")
-                        lines += "| ${rule.id} | ${plugin.name} | `${php.relativeTo(plugin).path}:$line` | ${p.descriptionTemplate} | `$snippet` |"
+                    // Parse without indexing and run the inspection's own visitor (see runInspection).
+                    runInspection(project, tool, php.name, text).forEach { f ->
+                        val snippet = f.lineText.take(140).replace("|", "\\|")
+                        lines += "| ${rule.id} | ${plugin.name} | `${php.relativeTo(plugin).path}:${f.line}` | ${f.message} | `$snippet` |"
                     }
                 }
             }

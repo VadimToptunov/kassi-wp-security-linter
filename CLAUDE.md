@@ -31,6 +31,10 @@ open are recorded in `DECISIONS.md`.
 git submodule update --init       # rules/ and corpus/cases/ (needed by the build and tests)
 corpus/fetch-popular.sh && ./gradlew :plugin:test -Pkassi.fprun --tests '*FalsePositiveRun*'
                                   # false-positive run → plugin/build/reports/fp-run.md
+corpus/fetch-recall.sh && ./gradlew :plugin:test -Pkassi.recall --tests '*RecallRun*'
+                                  # recall on full CVE plugin sources → plugin/build/reports/recall-run.md
+LIST=longtail-plugins.txt OUT=longtail corpus/fetch-popular.sh && \
+  ./gradlew :plugin:test -Pkassi.fprun=$PWD/corpus/longtail --tests '*FalsePositiveRun*'   # long-tail run
 ```
 Versions are pinned in `gradle.properties` with their source. Re-check them upstream before bumping.
 
@@ -53,6 +57,7 @@ Versions are pinned in `gradle.properties` with their source. Re-check them upst
 2. `inspectionDescriptions/<Name>.html` with vulnerable + fixed examples.
 3. Registered in `plugin.xml` with `groupName="Kassi WordPress Security"`.
 4. YAML rule with `cwe`, `references` (real CVE), `precision_notes`.
-5. Corpus run: zero unexplained findings; disputed ones go in `FALSE_POSITIVES.md`.
+5. Corpus run: zero unexplained findings; disputed ones go in `FALSE_POSITIVES.md`. Recall run stays
+   31/31 (or N/N); no triaged real weakness may be lost by a tightening (VALIDATION.md).
 6. At least one `kassi-wp-corpus` case: `vulnerable.php` flagged, `fixed.php` silent.
 7. `./gradlew test verifyPlugin` green.

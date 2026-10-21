@@ -49,3 +49,5 @@ hs_err_pid*.log
 
 .intellijPlatform/
 corpus/plugins/
+corpus/recall/
+corpus/longtail/

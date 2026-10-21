@@ -25,3 +25,17 @@ class P_Public {
         $user->set_role('administrator');
     }
 }
+
+// A capability check in an unrelated branch of the registering function does not gate the handler.
+class P_Invoice {
+    public function init() {
+        if (current_user_can('manage_options') && isset($_GET['reset'])) {
+            $this->reset_settings();
+        }
+        add_action('wp_ajax_nopriv_p_invoice', array($this, 'handle'));
+    }
+    public function <error descr="Unauthenticated handler 'handle' (hook wp_ajax_nopriv_p_invoice) calls update_option() with no capability check: anyone can trigger it">handle</error>() {
+        check_ajax_referer('p_invoice');
+        update_option('p_invoice_settings', $_POST['settings']);
+    }
+}
