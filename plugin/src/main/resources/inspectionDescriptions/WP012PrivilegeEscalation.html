@@ -1,0 +1,21 @@
+<html>
+<body>
+<p>Reports request data that decides a user's role or capabilities: <code>-&gt;set_role()</code>, <code>-&gt;add_role()</code>, <code>-&gt;add_cap()</code>, the <code>'role'</code> of <code>wp_insert_user()</code> / <code>wp_update_user()</code>, or a <code>*capabilities</code> user meta value (CWE-269, Improper Privilege Management). A registration or profile form that accepts a role lets anyone become an administrator.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>$role = sanitize_text_field( $_POST['role'] );
+if ( get_role( $role ) ) {
+    $user-&gt;set_role( $role );
+}</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>$role = sanitize_key( $_POST['role'] );
+if ( in_array( $role, array( 'subscriber', 'customer' ), true ) ) {
+    $user-&gt;set_role( $role );
+}</code></pre>
+
+<p><code>get_role()</code> is not an allow-list: <code>administrator</code> exists too. An <code>in_array()</code> allow-list, or a fixed role, is recognised.</p>
+<!-- tooltip end -->
+<p>Rule WP-012 · CWE-269 · see the kassi-wp-rules repository for references.</p>
+</body>
+</html>

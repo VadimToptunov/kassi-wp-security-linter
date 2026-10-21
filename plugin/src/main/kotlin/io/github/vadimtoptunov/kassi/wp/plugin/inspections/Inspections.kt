@@ -14,5 +14,10 @@ object Inspections {
             WP006UnescapedOutputInspection.RULE_ID to WP006UnescapedOutputInspection(),
             WP007UnsafeFilePathInspection.RULE_ID to WP007UnsafeFilePathInspection(),
             WP008UnsafeRedirectInspection.RULE_ID to WP008UnsafeRedirectInspection(),
+            WP009ObjectInjectionInspection.RULE_ID to WP009ObjectInjectionInspection(),
+            WP010ServerSideRequestForgeryInspection.RULE_ID to WP010ServerSideRequestForgeryInspection(),
+            WP011UnsafeFileUploadInspection.RULE_ID to WP011UnsafeFileUploadInspection(),
+            WP012PrivilegeEscalationInspection.RULE_ID to WP012PrivilegeEscalationInspection(),
+            WP013ShortcodeAttributeXssInspection.RULE_ID to WP013ShortcodeAttributeXssInspection(),
         )
 }

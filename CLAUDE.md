@@ -13,7 +13,7 @@ open are recorded in `DECISIONS.md`.
 - `core/` imports nothing from IntelliJ, the PHP plugin or `plugin/` (`ModuleBoundaryTest`).
   `core` analyses run over `core.ast.AstNode`; `plugin/psi/PhpPsiAstNode` is the PSI adapter.
 - New rules only when the user asks; each follows the definition of done (real-CVE corpus, FP run).
-  v0.1 = WP-001..WP-008; Stage 5 adds WP-009..WP-013 (user decision 2026-10-21, see DECISIONS.md).
+  v0.1 = WP-001..WP-013 (WP-009..WP-013 added in Stage 5 at the user's request, see DECISIONS.md).
 - Never weaken a rule to pass the corpus; tighten it or log the case in `FALSE_POSITIVES.md`.
 - No schema change without updating the validator and its tests.
 - No `@Deprecated` platform API; check the SDK docs, not memory.

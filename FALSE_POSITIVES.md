@@ -86,3 +86,22 @@ WP-002: 0 findings. WP-004: all 16 findings weak (the intentionally public route
 No findings. Known miss: Awesome Support 6.1.5 (the fix for CVE-2023-5355). It uses a realpath + strpos
 prefix guard on a variable other than the sink argument. The rule does not recognise that guard, so it
 would report the fixed code. The case is kept out of the corpus and recorded in the rule's precision_notes.
+
+## WP-009 … WP-013: run of 2026-10-21 (17,896 files)
+
+The first run gave 7 findings. Three tightenings followed (none weakens a rule):
+
+1. **WP-010: input after a fixed scheme and host** (`'https://www.goodreads.com/author/show/' . $id`,
+   `BASE_CONST . $path`, `sprintf('%s/rest/…', <clean base>, …)`, `add_query_arg($args, <fixed base>)`).
+   It cannot change the destination. This removed 3 Jetpack findings: `jetpack-explat`, `jetpack-stats-admin`
+   and the Goodreads endpoint.
+2. **Element-level taint.** `$atts['username'] = preg_replace('/[^A-Za-z0-9_]+/', '', …)` cleans that element
+   only. Before this, every array write was a weak update. This removed the Jetpack `twitter-timeline`
+   shortcode finding.
+3. **WP-013: temporary shortcodes.** `add_shortcode` and `remove_shortcode` in the same function only evaluate
+   internal strings, such as WooCommerce's `[fee]` in shipping cost formulas. This removed the two
+   WooCommerce flat-rate findings.
+
+| Rule | Plugin | Location | Decision |
+| --- | --- | --- | --- |
+| WP-011 | contact-form-7@6.2.2 | `includes/file.php:65` | **Accepted false positive (cross-function check).** The file type is validated in the file form-tag's validation filter in another file. The name also goes through `wpcf7_antiscript_file_name()`, and the upload folder is protected. The rule sees checks only in the same function. A CF7-specific pattern was not added to the rule. |

@@ -1,0 +1,19 @@
+<html>
+<body>
+<p>Reports a shortcode callback that returns or echoes its attributes without escaping (CWE-79, Stored Cross-site Scripting). Contributors can write shortcodes, so <code>[my_icon class='"&gt;&lt;script&gt;…']</code> runs in every visitor's browser, including administrators previewing the post.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>function my_icon_shortcode( $atts ) {
+    $a = shortcode_atts( array( 'class' =&gt; '' ), $atts );
+    return '&lt;i class="' . $a['class'] . '"&gt;&lt;/i&gt;';
+}
+add_shortcode( 'my_icon', 'my_icon_shortcode' );</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>    return '&lt;i class="' . esc_attr( $a['class'] ) . '"&gt;&lt;/i&gt;';</code></pre>
+
+<p><code>sanitize_text_field()</code> is not enough inside attributes: it keeps quotes. The callback must be in the same file as <code>add_shortcode()</code>. <code>extract( $atts )</code> is not followed.</p>
+<!-- tooltip end -->
+<p>Rule WP-013 · CWE-79 · see the kassi-wp-rules repository for references.</p>
+</body>
+</html>

@@ -39,15 +39,53 @@ class TaintAnalyzer(
      * Analyses one [scope]. [sinkArguments] is asked for every node, in evaluation order, and returns
      * the argument nodes of that node that are sinks (empty for non-sinks).
      */
-    fun analyze(scope: AstNode, sinkArguments: (AstNode) -> List<AstNode>): List<TaintedSink> =
-        Run(scope, sinkArguments).also { it.visit(scope) }.found
+    fun analyze(
+        scope: AstNode,
+        sinkArguments: (AstNode) -> List<AstNode>,
+        initial: Map<String, Taint> = emptyMap(),
+    ): List<TaintedSink> = Run(scope, sinkArguments).also { it.env.putAll(initial); it.visit(scope) }.found
 
     private inner class Run(val scope: AstNode, val sinkArguments: (AstNode) -> List<AstNode>) {
-        val env = HashMap<String, Taint>()
+        var env = HashMap<String, Taint>()
         val found = mutableListOf<TaintedSink>()
 
         /** Source text of expressions proven clean by a guard (`$x`, `$_GET['t']`); a multiset for nesting. */
-        val guarded = mutableListOf<String>()
+        var guarded = mutableListOf<String>()
+
+        /** The state on one control-flow path. */
+        inner class PathState(val env: HashMap<String, Taint>, val guarded: MutableList<String>)
+
+        fun snapshot() = PathState(HashMap(env), guarded.toMutableList())
+
+        fun restore(p: PathState) {
+            env = HashMap(p.env)
+            guarded = p.guarded.toMutableList()
+        }
+
+        /** Runs [block] from [start] (plus [extraGuards]) and returns the state at its end. */
+        fun branch(start: PathState, extraGuards: List<String>, block: () -> Unit): PathState {
+            restore(start)
+            guarded += extraGuards
+            block()
+            return snapshot()
+        }
+
+        /**
+         * May-taint join: a variable is tainted after the `if` when it is tainted, and not guarded, on
+         * at least one path that reaches past it. Guards survive only if every such path has them.
+         */
+        fun join(paths: List<PathState>, fallback: PathState) {
+            if (paths.isEmpty()) { restore(fallback); return }
+            val joined = HashMap<String, Taint>()
+            for (p in paths) for ((name, t) in p.env) {
+                if (normalize("\$$name") in p.guarded) continue
+                joined[name] = t + joined[name]
+            }
+            // An element is clean after the join only if every path made it clean.
+            joined.keys.filter { '[' in it }.forEach { k -> if (paths.any { k !in it.env }) joined.remove(k) }
+            env = joined
+            guarded = paths.map { it.guarded.toSet() }.reduce { a, b -> a intersect b }.toMutableList()
+        }
 
         fun visit(n: AstNode) {
             if (n != scope && n.kind.isFunctionLike) return
@@ -80,17 +118,33 @@ class TaintAnalyzer(
             }
         }
 
+        /**
+         * `if / elseif / else` with per-path state. The then-branch sees the condition's positive guards;
+         * the implicit fall-through path (no `else`) sees its negative guards, so
+         * `if (!in_array($x, $ok)) { $x = 'default'; }` and `if (!in_array($x, $ok)) { return; }` both
+         * leave `$x` clean. Paths that end in return/exit/die/a terminator do not reach the join.
+         */
         fun visitIf(n: AstNode) {
             val condition = n.child(AstRole.CONDITION)
             val body = n.child(AstRole.BODY)
             condition?.let(::visit)
-            val inside = condition?.let(::positiveGuards).orEmpty()
-            guarded += inside
-            body?.let(::visit)
-            inside.forEach { guarded.remove(it) }
-            n.children.filter { it != condition && it != body }.forEach(::visit) // elseif / else
-            // if (!guard($x)) { return; } → $x is clean from here on.
-            if (condition != null && body != null && terminates(body)) guarded += negativeGuards(condition)
+            val start = snapshot()
+            val reaching = mutableListOf<PathState>()
+
+            val thenPath = branch(start, condition?.let(::positiveGuards).orEmpty()) { body?.let(::visit) }
+            if (body == null || !terminates(body)) reaching += thenPath
+
+            val others = n.children.filter { it != condition && it != body }
+            var hasElse = false
+            for (b in others) {
+                val isElse = b.text.startsWith("else") && !b.text.startsWith("elseif")
+                hasElse = hasElse || isElse
+                val p = branch(start, emptyList()) { visit(b) }
+                val inner = b.children.lastOrNull()
+                if (inner == null || !terminates(inner)) reaching += p
+            }
+            if (!hasElse) reaching += branch(start, condition?.let(::negativeGuards).orEmpty()) {}
+            join(reaching, start)
         }
 
         fun guardArgument(n: AstNode): String? =
@@ -140,11 +194,27 @@ class TaintAnalyzer(
             // A new value replaces whatever a guard proved about the old one.
             guarded.removeAll { it == normalize(target.text) }
             when (target.kind) {
-                AstKind.VARIABLE -> target.name?.let { if (t == null) env.remove(it) else env[it] = t }
-                // $a['k'] = ... / $a[] = ...: weak update of the whole array.
-                AstKind.ARRAY_ACCESS -> rootVariable(target)?.let { name -> t?.let { env[name] = it + env[name] } }
+                AstKind.VARIABLE -> target.name?.let { name ->
+                    env.keys.removeAll { it.startsWith(elementPrefix(name)) }
+                    if (t == null) env.remove(name) else env[name] = t
+                }
+                AstKind.ARRAY_ACCESS -> rootVariable(target)?.let { name ->
+                    // $a['k'] = v: a strong update of that element ...
+                    elementKey(target)?.let { env[it] = t ?: CLEAN }
+                    // ... and a weak update of the whole array (for reads without a literal key).
+                    t?.let { env[name] = it + env[name] }
+                }
                 else -> Unit // properties, list() destructuring: not tracked
             }
+        }
+
+        fun elementPrefix(name: String) = "$name["
+
+        /** `$a['k']` on a plain variable with a literal key → "a['k']"; otherwise null. */
+        fun elementKey(n: AstNode): String? {
+            val recv = n.child(AstRole.RECEIVER)?.takeIf { it.kind == AstKind.VARIABLE }?.name ?: return null
+            val key = n.child(AstRole.KEY)?.takeIf { it.kind == AstKind.STRING_LITERAL || it.kind == AstKind.NUMBER_LITERAL } ?: return null
+            return elementPrefix(recv) + (key.stringValue ?: key.text) + "]"
         }
 
         fun rootVariable(n: AstNode): String? = when (n.kind) {
@@ -163,14 +233,19 @@ class TaintAnalyzer(
             AstKind.ARRAY_ACCESS -> if (n.child(AstRole.KEY)?.stringValue?.let { it in spec.cleanKeys } == true) null else {
                 val receiver = n.child(AstRole.RECEIVER)
                 val global = receiver?.takeIf { it.kind == AstKind.VARIABLE }?.name?.takeIf(::isSuperglobal)
-                if (global != null) {
-                    superglobal(global, n.child(AstRole.KEY)?.stringValue, keyed = true)
-                } else {
-                    receiver?.let(::eval)
+                val element = elementKey(n)?.let { env[it] }
+                when {
+                    global != null -> superglobal(global, n.child(AstRole.KEY)?.stringValue, keyed = true)
+                    element != null -> element.takeIf { it.sources.isNotEmpty() }
+                    else -> receiver?.let(::eval)
                 }
             }
-            AstKind.INTERPOLATED_STRING -> Taint.union(n.children.map(::eval))
-            AstKind.CONCAT -> Taint.union(listOf(n.child(AstRole.LEFT), n.child(AstRole.RIGHT)).map { it?.let(::eval) })
+            AstKind.INTERPOLATED_STRING -> if (spec.hostPrefixCleans && HOST_PREFIX.containsMatchIn(n.stringValue.orEmpty())) null else {
+                Taint.union(n.children.map(::eval))
+            }
+            AstKind.CONCAT -> if (spec.hostPrefixCleans && hostFixed(n)) null else {
+                Taint.union(listOf(n.child(AstRole.LEFT), n.child(AstRole.RIGHT)).map { it?.let(::eval) })
+            }
             AstKind.BINARY -> if (n.name == "??") Taint.union(listOf(n.child(AstRole.LEFT), n.child(AstRole.RIGHT)).map { it?.let(::eval) }) else null
             AstKind.TERNARY -> Taint.union(
                 listOf(n.child(AstRole.LEFT) ?: n.child(AstRole.CONDITION), n.child(AstRole.RIGHT)).map { it?.let(::eval) },
@@ -203,12 +278,34 @@ class TaintAnalyzer(
             }
         }
 
+        /**
+         * URL rules (`params.host_prefix_cleans`): input appended after a fixed scheme and host cannot
+         * change where the request goes. Fixed means a literal `scheme://host/…` (or `?`/`#`), or a
+         * constant / class constant / clean value as the leftmost operand.
+         */
+        fun hostFixed(concat: AstNode): Boolean {
+            var left: AstNode = concat
+            while (left.kind == AstKind.CONCAT) left = left.child(AstRole.LEFT) ?: return false
+            return when (left.kind) {
+                AstKind.STRING_LITERAL, AstKind.INTERPOLATED_STRING -> HOST_PREFIX.containsMatchIn(left.stringValue.orEmpty())
+                AstKind.CONSTANT -> left.name?.lowercase() !in setOf("true", "false", "null")
+                AstKind.CLASS_CONSTANT -> true
+                AstKind.CALL, AstKind.STATIC_CALL, AstKind.METHOD_CALL, AstKind.PROPERTY_ACCESS -> eval(left) == null
+                else -> false
+            }
+        }
+
         /** sprintf-like: only arguments consumed by a `%s` placeholder carry taint into the result. */
         fun formatTaint(call: AstNode): Taint? {
             val format = call.arguments.firstOrNull() ?: return null
             val args = call.arguments.drop(1)
             val literal = format.stringValue?.takeIf { format.kind == AstKind.STRING_LITERAL }
                 ?: return Taint.union(call.arguments.map(::eval))
+            if (spec.hostPrefixCleans) {
+                if (HOST_PREFIX.containsMatchIn(literal)) return null
+                // '%s/path?...' whose first %s is a clean base URL
+                if (literal.startsWith("%s/") && args.firstOrNull()?.let(::eval) == null) return null
+            }
             var next = 0
             val used = mutableListOf<AstNode>()
             for (m in PLACEHOLDER.findAll(literal)) {
@@ -231,6 +328,8 @@ class TaintAnalyzer(
     }
 
     companion object {
+        private val CLEAN = Taint(emptySet())
+        private val HOST_PREFIX = Regex("""^[A-Za-z][A-Za-z0-9+.-]*://[^/?#'"\s]+[/?#]""")
         private val COMPARISONS = setOf("==", "===", "!=", "!==", "<>")
         private val CLEAN_CASTS = setOf("int", "integer", "float", "double", "bool", "boolean")
         // %[argnum$][flags][width][.precision]specifier, plus %%.

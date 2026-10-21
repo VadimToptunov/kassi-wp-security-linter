@@ -58,6 +58,7 @@ sealed interface SourceSpec {
  *  - `params.terminators`      calls that end the request (`wp_die`, `wp_send_json_error`, ...)
  *  - `params.clean_keys`       array keys whose values are never attacker-controlled
  *                              (`$_FILES['f']['tmp_name']` is a server-generated path)
+ *  - `params.host_prefix_cleans` `[true]` for URL rules: input after a fixed `scheme://host/` is clean
  */
 class TaintSpec(
     val sources: List<SourceSpec>,
@@ -68,6 +69,7 @@ class TaintSpec(
     val guardFunctions: Set<String> = emptySet(),
     val terminators: Set<String> = emptySet(),
     val cleanKeys: Set<String> = emptySet(),
+    val hostPrefixCleans: Boolean = false,
 ) {
     companion object {
         fun of(rule: Rule): TaintSpec {
@@ -81,6 +83,7 @@ class TaintSpec(
                 guardFunctions = rule.params.strings("guard_functions").map { it.lowercase() }.toSet(),
                 terminators = rule.params.strings("terminators").map { it.lowercase() }.toSet(),
                 cleanKeys = rule.params.strings("clean_keys").toSet(),
+                hostPrefixCleans = rule.params.strings("host_prefix_cleans").firstOrNull()?.toBoolean() == true,
             )
         }
     }

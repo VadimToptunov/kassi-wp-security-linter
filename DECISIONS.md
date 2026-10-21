@@ -120,3 +120,26 @@ Closed before coding (2026-10-20).
   spec is lifted for the BACKLOG items, which are planned as Stage 5: WP-009 object injection,
   WP-010 SSRF, WP-011 unsafe upload, WP-012 privilege escalation via role/capabilities, WP-013
   shortcode-attribute XSS. Each follows the same definition of done (real-CVE corpus, FP run).
+
+## Stage 5 decisions (WP-009 … WP-013)
+
+- **Path-sensitive if/else in the taint engine.** Each branch starts from the pre-`if` state; the
+  then-branch gets the condition's positive guards; the implicit fall-through gets its negative
+  guards; paths that terminate are dropped; the join is may-taint (tainted on any reaching path).
+  The Wholesale case (CVE-2026-12144: assigned from `$_POST` in `if`, constant in `else`) needed it.
+  The earlier "early exit after `!guard`" rule is now a special case. This change replaces the Stage 2
+  "no branch joins" design; all earlier fixtures and corpus cases still pass.
+- **Element-level taint**: `$a['k'] = v` strongly updates that element (and weakly the array).
+- **WP-009**: `unserialize($x, ['allowed_classes' => false])` is not a sink.
+- **WP-010**: `wp_safe_remote_*` is the fix and not a sink. A fixed `scheme://host/` prefix, a constant
+  base or a clean `%s/` base cleans the URL (`host_prefix_cleans`). A constant base is assumed to end at
+  the host.
+- **WP-011** is a presence check, not taint: `move_uploaded_file` in a function with no type-check
+  call anywhere in it. A literal destination extension is safe. Checks in other functions are not
+  seen (the CF7 false positive, accepted and documented).
+- **WP-012**: sinks are role methods, the `'role'` of `wp_insert_user`/`wp_update_user` (or non-literal
+  args), and `*capabilities` user meta. `get_role()` is deliberately not a guard.
+- **WP-013**: the source is the shortcode callback's first parameter. `sanitize_text_field` is not an
+  escaper here (CVE-2024-11199: it keeps quotes). Temporary shortcodes (registered and removed in one
+  function) are skipped.
+- **Levels**: ERROR for WP-009, WP-011, WP-012 (critical); WARNING for WP-010, WP-013.

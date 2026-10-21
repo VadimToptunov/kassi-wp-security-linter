@@ -1,0 +1,15 @@
+<html>
+<body>
+<p>Reports request data, including cookies, that reaches <code>unserialize()</code> or <code>maybe_unserialize()</code> (CWE-502, Deserialization of Untrusted Data). Unserializing attacker input can instantiate arbitrary objects; with a gadget chain in any active plugin, that means code execution, file deletion or data theft.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>$config = maybe_unserialize( base64_decode( $_POST['config'] ) );</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>$config = json_decode( wp_unslash( $_POST['config'] ), true );</code></pre>
+
+<p><code>unserialize( $data, array( 'allowed_classes' =&gt; false ) )</code> is not reported. The flow is followed inside one function only.</p>
+<!-- tooltip end -->
+<p>Rule WP-009 · CWE-502 · see the kassi-wp-rules repository for references.</p>
+</body>
+</html>

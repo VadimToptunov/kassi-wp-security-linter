@@ -15,8 +15,13 @@ First release.
   - WP-007: File path built from request data (CWE-22)
   - WP-008: `wp_redirect()` to a URL from request data (CWE-601). Includes a quick-fix that
     switches to `wp_safe_redirect()`.
-- Intra-procedural taint engine. It understands WordPress sanitizers, allow-list guards and
-  `sprintf` placeholders.
+  - WP-009: PHP object injection via `unserialize()` / `maybe_unserialize()` of request data (CWE-502)
+  - WP-010: Server-side request forgery via `wp_remote_*()` / `download_url()` (CWE-918)
+  - WP-011: Uploaded file stored without a file type check (CWE-434)
+  - WP-012: Request data decides a user role or capabilities (CWE-269)
+  - WP-013: Shortcode attributes output without escaping, i.e. stored XSS (CWE-79)
+- Intra-procedural taint engine. It joins if/else paths, tracks array elements, and understands
+  WordPress sanitizers, allow-list guards and `sprintf` placeholders.
 - Tools | Kassi WP Security Report: deterministic Markdown and JSON over the project.
 - Settings | Tools | Kassi WordPress Security: excluded paths (default `vendor/`, `node_modules/`,
   `tests/`) and an optional project rule pack.
