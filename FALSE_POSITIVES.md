@@ -80,3 +80,9 @@ What remains:
 | WP-003 | updraftplus@1.26.13 | `admin.php:752` | **Kept as a true pattern, likely mitigated.** The nopriv restore continuation is gated by `wp_verify_nonce(..., 'updraftplus-credentialtest-nonce')`. Nonces are bound to the user at creation, so a visitor cannot forge one unless a logged-out nonce is printed publicly. Reported because only a nonce stands between an anonymous request and `update_site_option`. |
 
 WP-002: 0 findings. WP-004: all 16 findings weak (the intentionally public routes from Stage 1).
+
+## WP-007: run of 2026-10-21 (13,422 files)
+
+No findings. Known miss: Awesome Support 6.1.5 (the fix for CVE-2023-5355). It uses a realpath + strpos
+prefix guard on a variable other than the sink argument. The rule does not recognise that guard, so it
+would report the fixed code. The case is kept out of the corpus and recorded in the rule's precision_notes.

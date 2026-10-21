@@ -21,6 +21,12 @@ class KnowledgeBase private constructor(private val byId: Map<String, Rule>) {
 
     fun require(id: String): Rule = byId[id] ?: error("rule $id is not in the rule base")
 
+    /**
+     * This base with [pack] layered on top: a pack rule replaces the rule with the same id (a pack is a
+     * newer, vetted copy of the same rule format); other pack rules are added.
+     */
+    fun withOverrides(pack: KnowledgeBase): KnowledgeBase = KnowledgeBase(LinkedHashMap(byId).apply { putAll(pack.byId) })
+
     companion object {
         /** Loads every `*.yml` under [dir] (e.g. a kassi-wp-rules checkout's `rules/` folder). */
         fun loadDirectory(dir: File): KnowledgeBase {

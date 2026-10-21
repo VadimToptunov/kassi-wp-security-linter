@@ -4,33 +4,38 @@ import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.LocalQuickFix
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiFile
 import com.jetbrains.php.lang.psi.PhpFile
 import com.jetbrains.php.lang.psi.elements.Function
-import io.github.vadimtoptunov.kassi.wp.core.check.Checks
-import io.github.vadimtoptunov.kassi.wp.core.check.FileCheck
 import io.github.vadimtoptunov.kassi.wp.core.check.Finding
 import io.github.vadimtoptunov.kassi.wp.plugin.psi.PhpPsiAstNode
-import io.github.vadimtoptunov.kassi.wp.plugin.rules.BuiltInRules
+import io.github.vadimtoptunov.kassi.wp.plugin.rules.ProjectRuleBase
+import io.github.vadimtoptunov.kassi.wp.plugin.settings.KassiSettings
 
 /**
- * Shared shell for file-level rules: runs the rule's core [FileCheck] (from the [Checks] registry)
- * once per PHP file and reports its findings. All detection logic lives in core.
+ * Shared shell for every rule: runs the rule's core check (from the project's rule base, i.e.
+ * built-in rules plus an optional rule pack) once per PHP file that is not excluded in settings,
+ * and reports its findings. All detection logic lives in core.
  */
-abstract class RuleInspection(private val ruleId: String) : LocalInspectionTool() {
+abstract class RuleInspection(val ruleId: String) : LocalInspectionTool() {
 
     protected open fun fixesFor(finding: Finding, psi: PsiElement): List<LocalQuickFix> = emptyList()
 
-    private val check: FileCheck by lazy {
-        Checks.forRule(BuiltInRules.knowledgeBase.require(ruleId)) ?: error("$ruleId has no check in core")
+    /** A function/method is highlighted on its name; a closure on its `function` keyword. */
+    protected open fun anchor(psi: PsiElement): PsiElement = when (psi) {
+        is Function -> psi.nameIdentifier ?: psi.firstChild ?: psi
+        else -> psi
     }
 
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor =
         object : PsiElementVisitor() {
             override fun visitFile(file: PsiFile) {
-                if (file !is PhpFile) return
+                if (file !is PhpFile || isExcluded(file)) return
+                val check = ProjectRuleBase.getInstance(file.project).check(ruleId) ?: return
                 for (finding in check.checkFile(PhpPsiAstNode.wrap(file))) {
                     val psi = (finding.node as PhpPsiAstNode).psi
                     holder.registerProblem(
@@ -43,9 +48,16 @@ abstract class RuleInspection(private val ruleId: String) : LocalInspectionTool(
             }
         }
 
-    /** A function/method is highlighted on its name; a closure on its `function` keyword. */
-    private fun anchor(psi: PsiElement): PsiElement = when (psi) {
-        is Function -> psi.nameIdentifier ?: psi.firstChild ?: psi
-        else -> psi
+    companion object {
+        fun relativePath(project: Project, file: PsiFile): String? {
+            val vf = file.originalFile.virtualFile ?: return null
+            val base = project.basePath?.let { com.intellij.openapi.vfs.LocalFileSystem.getInstance().findFileByPath(it) }
+            return base?.let { VfsUtilCore.getRelativePath(vf, it) } ?: vf.path
+        }
+
+        fun isExcluded(file: PsiFile): Boolean {
+            val path = relativePath(file.project, file) ?: return false
+            return KassiSettings.getInstance(file.project).exclusions.isExcluded(path)
+        }
     }
 }

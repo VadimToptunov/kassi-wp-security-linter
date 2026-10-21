@@ -4,17 +4,52 @@
     <vendor email="vtoptunov88@gmail.com" url="https://github.com/VadimToptunov">Vadim Toptunov</vendor>
 
     <description><![CDATA[
-    <p>Static security inspections for WordPress plugin and theme code in PhpStorm: missing capability
-    and nonce checks in admin/AJAX handlers, REST routes without a permission callback, unprepared SQL,
-    unescaped output, unsafe file paths and unsafe redirects.</p>
-    <p>Deterministic and fully offline: no network calls, no telemetry. Every rule maps to a CWE and is
-    backed by a real, fixed CVE from the WordPress plugin ecosystem.</p>
+    <p>Static security inspections for WordPress plugin and theme code, right in PhpStorm. Each rule maps to
+    a CWE and is backed by real, fixed CVEs from the WordPress plugin ecosystem. For every rule, the vulnerable
+    code is flagged and the fixed code stays silent.</p>
+    <h3>Inspections</h3>
+    <ul>
+      <li><b>WP-001</b> AJAX / admin-post handler changes state without a capability check (CWE-862)</li>
+      <li><b>WP-002</b> AJAX / admin-post handler changes state without nonce verification (CWE-352)</li>
+      <li><b>WP-003</b> Privileged action in a <code>wp_ajax_nopriv_*</code> / <code>admin_post_nopriv_*</code> handler (CWE-862)</li>
+      <li><b>WP-004</b> REST route without a real <code>permission_callback</code> (CWE-862)</li>
+      <li><b>WP-005</b> SQL built from request data without <code>$wpdb-&gt;prepare()</code> (CWE-89)</li>
+      <li><b>WP-006</b> Request data output without escaping (CWE-79)</li>
+      <li><b>WP-007</b> File path built from request data (CWE-22)</li>
+      <li><b>WP-008</b> <code>wp_redirect()</code> to a URL from request data (CWE-601)</li>
+    </ul>
+    <h3>Built for precision</h3>
+    <ul>
+      <li>Follows request data through assignments, concatenation, interpolation and loops within a function,
+      and stays silent when a flow is not proven.</li>
+      <li>Recognises the WordPress defences: <code>esc_*</code>, <code>wp_kses*</code>, <code>prepare()</code>,
+      <code>current_user_can()</code>, nonces, <code>wp_safe_redirect()</code>, allow-lists.</li>
+      <li>Safe quick-fixes only where they cannot change who can reach your code.</li>
+    </ul>
+    <h3>Project report</h3>
+    <p><b>Tools | Kassi WP Security Report</b> writes deterministic Markdown and JSON reports (rule, CWE,
+    file:line, code, CVE references). They are ready for code review, CI artifacts and compliance evidence.</p>
+    <h3>Deterministic and offline</h3>
+    <p>No network calls and no telemetry. One plugin version gives the same result everywhere. New rules
+    arrive with plugin updates. Teams can also commit an optional rule pack (same YAML format) to their
+    repository: <b>Settings | Tools | Kassi WordPress Security</b>.</p>
+    <p>The rules are open (CC BY 4.0):
+    <a href="https://github.com/VadimToptunov/kassi-wp-rules">kassi-wp-rules</a>.
+    WordPress is a trademark of the WordPress Foundation. This plugin is not affiliated with or endorsed by it.</p>
     ]]></description>
+
+    <change-notes><![CDATA[
+    <p><b>0.1.0</b>: first release. Eight inspections (WP-001 to WP-008), project report (Markdown and JSON),
+    path exclusions and an optional project rule pack.</p>
+    ]]></change-notes>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.jetbrains.php</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <projectConfigurable parentId="tools" id="kassi.wp.security" displayName="Kassi WordPress Security"
+                             instance="io.github.vadimtoptunov.kassi.wp.plugin.settings.KassiConfigurable"/>
+        <notificationGroup id="Kassi WordPress Security" displayType="BALLOON"/>
         <localInspection language="PHP" shortName="WP001MissingCapabilityCheck"
                          displayName="WP-001 AJAX/admin-post handler changes state without a capability check"
                          groupName="Kassi WordPress Security" enabledByDefault="true" level="WARNING"
@@ -39,9 +74,21 @@
                          displayName="WP-006 Request data output without escaping"
                          groupName="Kassi WordPress Security" enabledByDefault="true" level="WARNING"
                          implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP006UnescapedOutputInspection"/>
+        <localInspection language="PHP" shortName="WP007UnsafeFilePath"
+                         displayName="WP-007 File path built from request data"
+                         groupName="Kassi WordPress Security" enabledByDefault="true" level="WARNING"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP007UnsafeFilePathInspection"/>
         <localInspection language="PHP" shortName="WP008UnsafeRedirect"
                          displayName="WP-008 wp_redirect() to a URL from request data"
                          groupName="Kassi WordPress Security" enabledByDefault="true" level="WARNING"
                          implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP008UnsafeRedirectInspection"/>
     </extensions>
+
+    <actions>
+        <action id="kassi.wp.security.report" text="Kassi WP Security Report"
+                description="Run Kassi WordPress security inspections over the project and write Markdown and JSON reports"
+                class="io.github.vadimtoptunov.kassi.wp.plugin.report.GenerateReportAction">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+    </actions>
 </idea-plugin>

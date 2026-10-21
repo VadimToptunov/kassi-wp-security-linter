@@ -12,6 +12,7 @@ object Inspections {
             WP004UnprotectedRestRouteInspection.RULE_ID to WP004UnprotectedRestRouteInspection(),
             WP005UnpreparedSqlInspection.RULE_ID to WP005UnpreparedSqlInspection(),
             WP006UnescapedOutputInspection.RULE_ID to WP006UnescapedOutputInspection(),
+            WP007UnsafeFilePathInspection.RULE_ID to WP007UnsafeFilePathInspection(),
             WP008UnsafeRedirectInspection.RULE_ID to WP008UnsafeRedirectInspection(),
         )
 }

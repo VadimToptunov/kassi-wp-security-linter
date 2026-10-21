@@ -99,7 +99,16 @@ class TaintAnalyzer(
                 ?.takeIf { it.kind == AstKind.VARIABLE || it.kind == AstKind.ARRAY_ACCESS }
                 ?.let { normalize(it.text) }
 
+        /** `validate_file($f) === 0`, `0 !== validate_file($f)`: a comparison on a guard call is a check. */
+        fun comparedGuard(c: AstNode): String? =
+            if (c.kind == AstKind.BINARY && c.name in COMPARISONS) {
+                listOfNotNull(c.child(AstRole.LEFT), c.child(AstRole.RIGHT)).firstNotNullOfOrNull(::guardArgument)
+            } else {
+                null
+            }
+
         fun positiveGuards(c: AstNode): List<String> = when {
+            comparedGuard(c) != null -> listOf(comparedGuard(c)!!)
             c.kind == AstKind.BINARY && (c.name == "&&" || c.name.equals("and", ignoreCase = true)) ->
                 listOfNotNull(c.child(AstRole.LEFT), c.child(AstRole.RIGHT)).flatMap(::positiveGuards)
             c.kind == AstKind.OTHER && c.text.startsWith("(") -> c.children.singleOrNull()?.let(::positiveGuards).orEmpty()
@@ -107,6 +116,7 @@ class TaintAnalyzer(
         }
 
         fun negativeGuards(c: AstNode): List<String> = when {
+            comparedGuard(c) != null -> listOf(comparedGuard(c)!!)
             c.kind == AstKind.BINARY && (c.name == "||" || c.name.equals("or", ignoreCase = true)) ->
                 listOfNotNull(c.child(AstRole.LEFT), c.child(AstRole.RIGHT)).flatMap(::negativeGuards)
             c.kind == AstKind.OTHER && c.text.startsWith("!") -> c.children.singleOrNull()?.let(::positiveGuards).orEmpty()
@@ -150,7 +160,7 @@ class TaintAnalyzer(
 
         fun evalUnguarded(n: AstNode): Taint? = when (n.kind) {
             AstKind.VARIABLE -> n.name?.let { name -> superglobal(name, null, keyed = false) ?: env[name] }
-            AstKind.ARRAY_ACCESS -> {
+            AstKind.ARRAY_ACCESS -> if (n.child(AstRole.KEY)?.stringValue?.let { it in spec.cleanKeys } == true) null else {
                 val receiver = n.child(AstRole.RECEIVER)
                 val global = receiver?.takeIf { it.kind == AstKind.VARIABLE }?.name?.takeIf(::isSuperglobal)
                 if (global != null) {
@@ -221,6 +231,7 @@ class TaintAnalyzer(
     }
 
     companion object {
+        private val COMPARISONS = setOf("==", "===", "!=", "!==", "<>")
         private val CLEAN_CASTS = setOf("int", "integer", "float", "double", "bool", "boolean")
         // %[argnum$][flags][width][.precision]specifier, plus %%.
         private val PLACEHOLDER = Regex("""%%|%(?:(\d+)\$)?[-+ 0]*(?:'.)?\d*(?:\.\d+)?([bcdeEfFgGosuxX])""")

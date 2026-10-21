@@ -30,6 +30,8 @@ dependencies {
     testImplementation(kotlin("stdlib"))
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.13.4")
+    // Test-only: proves the hand-written report JSON parses with a real parser.
+    testImplementation("com.fasterxml.jackson.core:jackson-databind:2.22.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.13.4")
 }
 

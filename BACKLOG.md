@@ -1,4 +1,6 @@
-# Backlog (not in v0.1; record only)
+# Backlog
+
+Stage 5 (user decision 2026-10-21) takes the first five items below as WP-009..WP-013.
 
 - Object injection via `unserialize` on input (CWE-502)
 - Privilege escalation via `wp_capabilities` meta / `set_role` (CWE-269)
