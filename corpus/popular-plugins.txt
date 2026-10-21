@@ -1,0 +1,21 @@
+# slug@version download-url, pinned 2026-10-20 from the wordpress.org popular list
+elementor@4.3.5 https://downloads.wordpress.org/plugin/elementor.4.3.5.zip
+wordpress-seo@28.7 https://downloads.wordpress.org/plugin/wordpress-seo.28.7.zip
+contact-form-7@6.2.2 https://downloads.wordpress.org/plugin/contact-form-7.6.2.2.zip
+classic-editor@1.7.0 https://downloads.wordpress.org/plugin/classic-editor.1.7.0.zip
+litespeed-cache@7.9.2 https://downloads.wordpress.org/plugin/litespeed-cache.7.9.2.zip
+woocommerce@11.2.1 https://downloads.wordpress.org/plugin/woocommerce.11.2.1.zip
+google-site-kit@1.190.0 https://downloads.wordpress.org/plugin/google-site-kit.1.190.0.zip
+akismet@5.7.2 https://downloads.wordpress.org/plugin/akismet.5.7.2.zip
+wpforms-lite@2.0.2.2 https://downloads.wordpress.org/plugin/wpforms-lite.2.0.2.2.zip
+all-in-one-wp-migration@7.112 https://downloads.wordpress.org/plugin/all-in-one-wp-migration.7.112.zip
+wordfence@9.0.2 https://downloads.wordpress.org/plugin/wordfence.9.0.2.zip
+wp-mail-smtp@4.10.3 https://downloads.wordpress.org/plugin/wp-mail-smtp.4.10.3.zip
+seo-by-rank-math@1.0.280 https://downloads.wordpress.org/plugin/seo-by-rank-math.1.0.280.zip
+updraftplus@1.26.13 https://downloads.wordpress.org/plugin/updraftplus.1.26.13.zip
+duplicate-post@4.7 https://downloads.wordpress.org/plugin/duplicate-post.4.7.zip
+duplicate-page@4.5.9 https://downloads.wordpress.org/plugin/duplicate-page.zip
+really-simple-ssl@9.8.3 https://downloads.wordpress.org/plugin/really-simple-ssl.9.8.3.zip
+jetpack@16.3.1 https://downloads.wordpress.org/plugin/jetpack.16.3.1.zip
+insert-headers-and-footers@2.4.0 https://downloads.wordpress.org/plugin/insert-headers-and-footers.2.4.0.zip
+hostinger@3.0.79 https://downloads.wordpress.org/plugin/hostinger.3.0.79.zip

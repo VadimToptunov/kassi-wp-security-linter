@@ -14,6 +14,8 @@ import com.jetbrains.php.lang.psi.elements.ArrayCreationExpression
 import com.jetbrains.php.lang.psi.elements.ArrayHashElement
 import com.jetbrains.php.lang.psi.elements.AssignmentExpression
 import com.jetbrains.php.lang.psi.elements.BinaryExpression
+import com.jetbrains.php.lang.psi.elements.ClassConstantReference
+import com.jetbrains.php.lang.psi.elements.ClassReference
 import com.jetbrains.php.lang.psi.elements.ConstantReference
 import com.jetbrains.php.lang.psi.elements.FieldReference
 import com.jetbrains.php.lang.psi.elements.Function
@@ -26,6 +28,7 @@ import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.NewExpression
 import com.jetbrains.php.lang.psi.elements.Parameter
 import com.jetbrains.php.lang.psi.elements.PhpEchoStatement
+import com.jetbrains.php.lang.psi.elements.PhpExpression
 import com.jetbrains.php.lang.psi.elements.PhpPrintExpression
 import com.jetbrains.php.lang.psi.elements.PhpReturn
 import com.jetbrains.php.lang.psi.elements.SelfAssignmentExpression
@@ -86,6 +89,7 @@ class PhpPsiAstNode private constructor(val psi: PsiElement) : AstNode {
             AstRole.RECEIVER -> when (psi) {
                 is MethodReference -> psi.classReference
                 is FieldReference -> psi.classReference
+                is ClassConstantReference -> psi.classReference
                 is ArrayAccessExpression -> psi.value
                 else -> null
             }
@@ -118,7 +122,10 @@ class PhpPsiAstNode private constructor(val psi: PsiElement) : AstNode {
                 else -> null
             }
             AstRole.BODY -> when (psi) {
-                is Function -> significantChildren(psi).firstOrNull { it is GroupStatement }
+                // Block body, or for an arrow function (`fn () => expr`) the expression.
+                is Function -> significantChildren(psi).let { kids ->
+                    kids.firstOrNull { it is GroupStatement } ?: kids.lastOrNull { it is PhpExpression }
+                }
                 is If -> psi.statement
                 else -> null
             }
@@ -168,6 +175,8 @@ class PhpPsiAstNode private constructor(val psi: PsiElement) : AstNode {
             is UnaryExpression -> if (isCast(psi)) AstKind.CAST else AstKind.OTHER
             is StringLiteralExpression ->
                 if (significantChildren(psi).isEmpty()) AstKind.STRING_LITERAL else AstKind.INTERPOLATED_STRING
+            is ClassConstantReference -> AstKind.CLASS_CONSTANT
+            is ClassReference -> AstKind.CLASS_REFERENCE
             is ConstantReference -> AstKind.CONSTANT
             is ArrayCreationExpression -> AstKind.ARRAY_LITERAL
             is ArrayHashElement -> AstKind.ARRAY_ENTRY
@@ -192,6 +201,8 @@ class PhpPsiAstNode private constructor(val psi: PsiElement) : AstNode {
             AstKind.VARIABLE -> (psi as Variable).name.takeIf { it.isNotEmpty() }
             AstKind.PROPERTY_ACCESS -> (psi as FieldReference).name
             AstKind.CONSTANT -> (psi as ConstantReference).name
+            AstKind.CLASS_CONSTANT -> (psi as ClassConstantReference).name
+            AstKind.CLASS_REFERENCE -> (psi as ClassReference).name
             AstKind.PARAMETER -> (psi as Parameter).name
             AstKind.BINARY -> (psi as BinaryExpression).operation?.text
             AstKind.CAST -> (psi as UnaryExpression).operation?.text?.trim('(', ')', ' ', '\t')?.lowercase()

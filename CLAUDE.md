@@ -27,15 +27,21 @@ open are recorded in `DECISIONS.md`.
 ./gradlew verifyPlugin            # Plugin Verifier vs PhpStorm 2025.3 and newest (slow, downloads IDEs)
 ./gradlew buildPlugin             # plugin/build/distributions/*.zip
 ./gradlew runIde                  # sandbox PhpStorm with the plugin
+git submodule update --init       # rules/ and corpus/cases/ (needed by the build and tests)
+corpus/fetch-popular.sh && ./gradlew :plugin:test -Pkassi.fprun --tests '*FalsePositiveRun*'
+                                  # false-positive run → plugin/build/reports/fp-run.md
 ```
 Versions are pinned in `gradle.properties` with their source. Re-check them upstream before bumping.
 
 ## Layout
-- `core/`: pure Kotlin. `ast/` (AstNode + traversal), `model/` (Rule), and from later stages
-  `kb/` (YAML loader + validator) and `flow/` (intra-procedural taint).
-- `plugin/`: `psi/` (adapter), plus `inspections/`, `fixes/`, `report/` and `settings/` from later stages.
-- `rules/`: git submodule → `kassi-wp-rules` (public, CC BY 4.0), added in Stage 1.
-- `corpus/`: false-positive run script (20 popular plugins), Stage 4. CVE cases live in `kassi-wp-corpus`.
+- `core/`: pure Kotlin. `ast/` (AstNode + traversal), `model/` (Rule), `kb/` (YAML loader +
+  validator), `check/` (per-rule logic over AstNode), and from Stage 2 `flow/` (intra-procedural taint).
+- `plugin/`: `psi/` (adapter), `rules/` (built-in rule base from resources), `inspections/` (thin PSI
+  visitors + `Inspections.byRuleId`), `fixes/`; `report/` and `settings/` come in Stage 4.
+- `rules/`: git submodule → `kassi-wp-rules` (public, CC BY 4.0). Copied into the plugin's resources at build time.
+- `corpus/cases/`: git submodule → `kassi-wp-corpus` (public, GPL excerpts). `CorpusAcceptanceTest`
+  enforces vulnerable → finding, fixed → silent for every rule reference.
+- `corpus/fetch-popular.sh` + `popular-plugins.txt`: pinned top-20 plugins for the FP run (`corpus/plugins/`, git-ignored).
 
 ## Definition of done (per inspection)
 1. `plugin/src/test/testData/<rule-id>/` fixtures: positive, negative, sanitizer, and the

@@ -39,7 +39,10 @@ interface AstNode {
 
 enum class AstKind {
     FILE,
-    /** Named function declaration. [AstNode.name] = function name; body under [AstRole.BODY]. */
+    /**
+     * Named function declaration. [AstNode.name] = function name; body under [AstRole.BODY]
+     * (a [BLOCK]; for an arrow function `fn () => expr`, the expression itself).
+     */
     FUNCTION,
     /** Class method declaration. [AstNode.name] = method name. */
     METHOD,
@@ -78,6 +81,10 @@ enum class AstKind {
     NUMBER_LITERAL,
     /** `true` / `false` / `null` and `FOO` / `\FOO`. [AstNode.name] = constant name. */
     CONSTANT,
+    /** `Foo::BAR`. [AstNode.name] = `BAR`; [AstRole.RECEIVER] = the class reference. */
+    CLASS_CONSTANT,
+    /** A class name used as a value or receiver (`Foo` in `Foo::bar()`). [AstNode.name] = short class name. */
+    CLASS_REFERENCE,
     /** `[...]` / `array(...)`. Entries are [AstNode.arguments], each an [ARRAY_ENTRY]. */
     ARRAY_LITERAL,
     /** One entry: [AstRole.KEY] (null for list-style), [AstRole.VALUE]. */
