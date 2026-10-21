@@ -1,0 +1,43 @@
+<html>
+<body>
+<p>Reports a REST route registered with <code>register_rest_route()</code> that anyone can call:</p>
+<ul>
+  <li>an endpoint with no <code>permission_callback</code>, or</li>
+  <li>a state-changing endpoint (any method other than <code>GET</code>/<code>HEAD</code>) whose
+    callback always allows access: <code>'__return_true'</code>, or a closure that only returns
+    <code>true</code>.</li>
+</ul>
+<p>Without a real permission check, unauthenticated visitors can call the route (CWE-862, Missing
+Authorization). Example: CVE-2022-0218 (WP HTML Mail), where anyone could overwrite the theme settings.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>register_rest_route( 'my-plugin/v1', '/settings', array(
+    'methods'             =&gt; 'POST',
+    'callback'            =&gt; 'my_plugin_save_settings',
+    'permission_callback' =&gt; '__return_true',
+) );</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>register_rest_route( 'my-plugin/v1', '/settings', array(
+    'methods'             =&gt; 'POST',
+    'callback'            =&gt; 'my_plugin_save_settings',
+    'permission_callback' =&gt; function () {
+        return current_user_can( 'manage_options' );
+    },
+) );</code></pre>
+
+<p>An always-true callback on a write route is reported as a weak warning: intentionally public
+routes (form submissions, signed webhooks) are declared the same way, and stay safe only if the
+handler authenticates the request itself. Check that it does.</p>
+
+<p>A read-only route with no <code>permission_callback</code> is also reported as a weak warning. If the
+route is meant to be public, declare <code>'permission_callback' =&gt; '__return_true'</code>
+explicitly; a quick-fix does this, and it does not change behaviour. Check that the handler does not
+write anything: a route declared as <code>GET</code> can still delete data (CVE-2026-9172).</p>
+
+<p>The inspection stays silent when it cannot prove the shape: endpoint arrays built elsewhere,
+computed keys, methods that cannot be resolved, or a callback that is any other function.</p>
+<!-- tooltip end -->
+<p>Rule WP-004 · CWE-862 · see the kassi-wp-rules repository for references.</p>
+</body>
+</html>

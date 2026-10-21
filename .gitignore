@@ -48,3 +48,4 @@ bin/
 hs_err_pid*.log
 
 .intellijPlatform/
+corpus/plugins/

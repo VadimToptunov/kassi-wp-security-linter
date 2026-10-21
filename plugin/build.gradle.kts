@@ -78,6 +78,41 @@ intellijPlatform {
     }
 }
 
+// Built-in rule base: copy the YAML rules from the kassi-wp-rules submodule into the plugin's
+// resources under kassi/wp-rules/, plus an index (jar resources cannot be listed reliably).
+val rulesSourceDir = rootProject.layout.projectDirectory.dir("rules/rules")
+val generatedRuleResources = layout.buildDirectory.dir("generated/rule-resources")
+val generateRuleResources by tasks.registering {
+    description = "Copies kassi-wp-rules YAML into plugin resources (kassi/wp-rules/)."
+    inputs.dir(rulesSourceDir).withPropertyName("rules")
+    outputs.dir(generatedRuleResources)
+    val src = rulesSourceDir.asFile
+    val out = generatedRuleResources.map { it.dir("kassi/wp-rules").asFile }
+    doLast {
+        val target = out.get()
+        target.deleteRecursively()
+        target.mkdirs()
+        val files = src.walkTopDown().filter { it.isFile && it.extension == "yml" }.sortedBy { it.name }.toList()
+        require(files.isNotEmpty()) { "No rules in $src. Run: git submodule update --init" }
+        require(files.map { it.name }.toSet().size == files.size) { "Duplicate rule file names in $src" }
+        files.forEach { it.copyTo(target.resolve(it.name)) }
+        target.resolve("index.txt").writeText(files.joinToString("\n", postfix = "\n") { it.name })
+    }
+}
+sourceSets.main {
+    resources.srcDir(generateRuleResources)
+}
+
 tasks.test {
     useJUnitPlatform()
+    // Corpus acceptance tests read the kassi-wp-corpus submodule directly.
+    val corpusDir = rootProject.layout.projectDirectory.dir("corpus/cases")
+    inputs.dir(corpusDir).withPropertyName("corpus")
+    systemProperty("kassi.corpus.dir", corpusDir.asFile.absolutePath)
+    // Opt-in false-positive run over the popular-plugin corpus (corpus/fetch-popular.sh).
+    if (providers.gradleProperty("kassi.fprun").isPresent) {
+        systemProperty("kassi.fprun.dir", rootProject.layout.projectDirectory.dir("corpus/plugins").asFile.absolutePath)
+        systemProperty("kassi.fprun.report", layout.buildDirectory.file("reports/fp-run.md").get().asFile.absolutePath)
+        outputs.upToDateWhen { false }
+    }
 }
