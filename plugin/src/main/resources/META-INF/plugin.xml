@@ -15,6 +15,18 @@
     <depends>com.jetbrains.php</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <localInspection language="PHP" shortName="WP001MissingCapabilityCheck"
+                         displayName="WP-001 AJAX/admin-post handler changes state without a capability check"
+                         groupName="Kassi WordPress Security" enabledByDefault="true" level="WARNING"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP001MissingCapabilityCheckInspection"/>
+        <localInspection language="PHP" shortName="WP002MissingNonceVerification"
+                         displayName="WP-002 AJAX/admin-post handler changes state without nonce verification"
+                         groupName="Kassi WordPress Security" enabledByDefault="true" level="WARNING"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP002MissingNonceVerificationInspection"/>
+        <localInspection language="PHP" shortName="WP003NoprivPrivilegedAction"
+                         displayName="WP-003 Privileged action on an unauthenticated (nopriv) hook"
+                         groupName="Kassi WordPress Security" enabledByDefault="true" level="ERROR"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP003NoprivPrivilegedActionInspection"/>
         <localInspection language="PHP" shortName="WP004UnprotectedRestRoute"
                          displayName="WP-004 REST route without a real permission_callback"
                          groupName="Kassi WordPress Security" enabledByDefault="true" level="WARNING"

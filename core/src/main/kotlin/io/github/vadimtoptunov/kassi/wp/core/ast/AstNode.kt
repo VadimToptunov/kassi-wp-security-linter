@@ -44,6 +44,8 @@ enum class AstKind {
      * (a [BLOCK]; for an arrow function `fn () => expr`, the expression itself).
      */
     FUNCTION,
+    /** Class, interface or trait declaration. [AstNode.name] = short name; methods are descendants. */
+    CLASS,
     /** Class method declaration. [AstNode.name] = method name. */
     METHOD,
     /** `function () {}` or `fn () =>`. */

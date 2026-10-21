@@ -49,3 +49,34 @@ counts. Missing callbacks on write routes stay a full warning (zero hits in this
 | WP-008 | woocommerce@11.2.1 | `includes/admin/helper/class-wc-helper.php:1205` | `wp_redirect( wp_unslash( $_GET['wccom-install-url'] ) )` | **Kept (true pattern, hard to exploit).** The handler is gated by `wp_verify_nonce( $_GET['wc-helper-nonce'], 'connect' )` and an OAuth token exchange, so it cannot be used as a phishing link. The URL is still unvalidated; `wp_safe_redirect()` with an allowed-hosts filter would be correct. |
 
 WP-006 produced no findings in this run.
+
+## WP-001, WP-002, WP-003 and the WP-004 escalation: run of 2026-10-21 (11,986 files)
+
+The first run gave 28 WP-001 findings, nearly all wrong. The rules were tightened (never weakened)
+in these steps:
+
+1. **Capability and nonce wrappers defined in other files.** Examples: `wpforms_current_user_can()`,
+   `rsssl_user_can_manage()`, `UpdraftPlus_Options::user_can_manage()`. Rule lists now accept
+   wildcard patterns (`*user_can*`, `->*user_can*`, `*verify_nonce*`). This removed 20 findings.
+2. **Event reactors.** WooCommerce `EmailStyleSync` is hooked on `after_switch_theme` and similar
+   hooks as well as on an AJAX hook. Handlers that are also registered on non-endpoint hooks are
+   skipped (`endpoint_prefixes`).
+3. **Nonce only, no capability check.** These became WP-001 **weak** warnings: they are exploitable
+   only if the nonce reaches lower-privileged users.
+4. **One-time token / HMAC flows** (the WPForms, WP Mail SMTP and WPCode connect/upgrade handlers):
+   `hash_equals` / `hash_hmac` count as authentication for WP-003 and for the WP-004 escalation.
+5. **WP-004 escalation counts only sinks in the handler's own body.** Jetpack's
+   `verify_xml_rpc_error` and WooCommerce's QR login authenticate with a request secret and reach
+   their writes through helpers.
+
+What remains:
+
+| Rule | Plugin | Location | Decision |
+| --- | --- | --- | --- |
+| WP-001 (weak) | duplicate-page@4.5.9 | `duplicatepage.php:408` | Kept. A nonce-checked "close help" option write with no capability check. Low impact, accurate. |
+| WP-001 (weak) | insert-headers-and-footers@2.4.0 | `includes/admin/class-wpcode-notifications.php:447` | Kept. Notification dismissal with a nonce and no capability check. |
+| WP-001 (weak) | wordpress-seo@28.7 | `admin/ajax/class-yoast-dismissable-notice.php:67` | Kept. Same pattern. |
+| WP-001 (weak) | wpforms-lite@2.0.2.2 | `src/Admin/Challenge.php:671`, `:715` | Kept. Onboarding-challenge state behind `check_admin_referer` with no capability check. |
+| WP-003 | updraftplus@1.26.13 | `admin.php:752` | **Kept as a true pattern, likely mitigated.** The nopriv restore continuation is gated by `wp_verify_nonce(..., 'updraftplus-credentialtest-nonce')`. Nonces are bound to the user at creation, so a visitor cannot forge one unless a logged-out nonce is printed publicly. Reported because only a nonce stands between an anonymous request and `update_site_option`. |
+
+WP-002: 0 findings. WP-004: all 16 findings weak (the intentionally public routes from Stage 1).

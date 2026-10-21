@@ -8,23 +8,24 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiFile
 import com.jetbrains.php.lang.psi.PhpFile
+import com.jetbrains.php.lang.psi.elements.Function
+import io.github.vadimtoptunov.kassi.wp.core.check.Checks
+import io.github.vadimtoptunov.kassi.wp.core.check.FileCheck
 import io.github.vadimtoptunov.kassi.wp.core.check.Finding
-import io.github.vadimtoptunov.kassi.wp.core.check.TaintCheck
-import io.github.vadimtoptunov.kassi.wp.core.model.Rule
 import io.github.vadimtoptunov.kassi.wp.plugin.psi.PhpPsiAstNode
 import io.github.vadimtoptunov.kassi.wp.plugin.rules.BuiltInRules
 
 /**
- * Shared shell for the "input → sink" inspections: runs the rule's [TaintCheck] once per file and
- * reports its findings. The flow logic lives in core.
+ * Shared shell for file-level rules: runs the rule's core [FileCheck] (from the [Checks] registry)
+ * once per PHP file and reports its findings. All detection logic lives in core.
  */
-abstract class TaintInspection(private val ruleId: String) : LocalInspectionTool() {
-
-    protected abstract fun createCheck(rule: Rule): TaintCheck
+abstract class RuleInspection(private val ruleId: String) : LocalInspectionTool() {
 
     protected open fun fixesFor(finding: Finding, psi: PsiElement): List<LocalQuickFix> = emptyList()
 
-    private val check by lazy { createCheck(BuiltInRules.knowledgeBase.require(ruleId)) }
+    private val check: FileCheck by lazy {
+        Checks.forRule(BuiltInRules.knowledgeBase.require(ruleId)) ?: error("$ruleId has no check in core")
+    }
 
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor =
         object : PsiElementVisitor() {
@@ -33,7 +34,7 @@ abstract class TaintInspection(private val ruleId: String) : LocalInspectionTool
                 for (finding in check.checkFile(PhpPsiAstNode.wrap(file))) {
                     val psi = (finding.node as PhpPsiAstNode).psi
                     holder.registerProblem(
-                        psi,
+                        anchor(psi),
                         finding.message,
                         if (finding.weak) ProblemHighlightType.WEAK_WARNING else ProblemHighlightType.GENERIC_ERROR_OR_WARNING,
                         *fixesFor(finding, psi).toTypedArray(),
@@ -41,4 +42,10 @@ abstract class TaintInspection(private val ruleId: String) : LocalInspectionTool
                 }
             }
         }
+
+    /** A function/method is highlighted on its name; a closure on its `function` keyword. */
+    private fun anchor(psi: PsiElement): PsiElement = when (psi) {
+        is Function -> psi.nameIdentifier ?: psi.firstChild ?: psi
+        else -> psi
+    }
 }
