@@ -56,6 +56,8 @@ sealed interface SourceSpec {
  *  - `params.guard_functions` allow-list/format checks on their first argument (`in_array($x, $allowed)`,
  *    `is_numeric($x)`): the argument is clean inside `if (guard)` and after `if (!guard) { return; }`
  *  - `params.terminators`      calls that end the request (`wp_die`, `wp_send_json_error`, ...)
+ *  - `params.clean_keys`       array keys whose values are never attacker-controlled
+ *                              (`$_FILES['f']['tmp_name']` is a server-generated path)
  */
 class TaintSpec(
     val sources: List<SourceSpec>,
@@ -65,6 +67,7 @@ class TaintSpec(
     val formatFunctions: Set<String>,
     val guardFunctions: Set<String> = emptySet(),
     val terminators: Set<String> = emptySet(),
+    val cleanKeys: Set<String> = emptySet(),
 ) {
     companion object {
         fun of(rule: Rule): TaintSpec {
@@ -77,6 +80,7 @@ class TaintSpec(
                 formatFunctions = rule.params.strings("format_functions").map { it.lowercase() }.toSet(),
                 guardFunctions = rule.params.strings("guard_functions").map { it.lowercase() }.toSet(),
                 terminators = rule.params.strings("terminators").map { it.lowercase() }.toSet(),
+                cleanKeys = rule.params.strings("clean_keys").toSet(),
             )
         }
     }

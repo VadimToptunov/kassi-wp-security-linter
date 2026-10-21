@@ -24,6 +24,7 @@ object Checks {
         "WP-004" to { rule -> RestRouteCheck(rule).let { c -> FileCheck { f -> f.walk().filter { it.kind == AstKind.CALL }.flatMap(c::check).toList() } } },
         "WP-005" to ::SqlInjectionCheck,
         "WP-006" to ::UnescapedOutputCheck,
+        "WP-007" to ::UnsafePathCheck,
         "WP-008" to ::UnsafeRedirectCheck,
         "WP-001" to { rule ->
             HookHandlerCheck(rule) { h, hook, sink, weak ->

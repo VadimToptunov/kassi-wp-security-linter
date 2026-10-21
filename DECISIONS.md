@@ -94,3 +94,29 @@ Closed before coding (2026-10-20).
 - **Corpus**: 6 new cases (CVE-2023-6966, CVE-2025-3063, CVE-2023-0554, CVE-2023-6968,
   CVE-2021-4362, CVE-2025-2266). Shopper Approved 2.1 has no SVN tag, so its vulnerable side comes
   from the release zip (noted in its meta.yml).
+
+## Stage 4 decisions
+
+- **WP-007** reuses the taint engine. `sink_args` maps each function to its path-argument indexes;
+  `include`/`require` are sinks too. `$_FILES[...]['tmp_name' | 'size' | 'error']` are clean
+  (`clean_keys`); `['name']` is input. `file_exists` is **not** a guard:
+  `if (file_exists($f)) unlink($f)` is the classic vulnerable shape. A comparison on a guard call's
+  result (`0 !== validate_file($f)`) now counts as a check, for all taint rules.
+- **Settings** (`.idea/kassi-wp-security.xml`, shared with the team): excluded paths and an optional
+  rule-pack folder. Rule on/off and severity are not duplicated here; they are the IDE inspection
+  profile, which the report honours as well.
+- **Rule pack**: same YAML format, loaded from a project folder (no network). A pack rule replaces the
+  built-in rule with the same id. An invalid pack is reported once and ignored, and the built-in rules
+  keep running. Pack rule ids that this engine does not implement are reported and skipped.
+- **Report**: Tools | Kassi WP Security Report writes `kassi-wp-security-report.md` and `.json` to the
+  project root. The output is deterministic (no timestamps, sorted, project-relative paths), so it
+  diffs cleanly in CI and works as compliance evidence. The formatting logic lives in core (`Report`)
+  and is tested, including JSON validity with a real parser (Jackson, test scope only).
+- **WP-004** now runs on the same `RuleInspection` base and the project rule base, so packs and
+  exclusions apply to it too.
+- **Screenshots** are not produced by the build: see MARKETPLACE.md for the manual checklist using
+  `docs/demo/demo-plugin.php`.
+- **Scope change (user decision, 2026-10-21):** "add more rules". The v0.1-only restriction in the
+  spec is lifted for the BACKLOG items, which are planned as Stage 5: WP-009 object injection,
+  WP-010 SSRF, WP-011 unsafe upload, WP-012 privilege escalation via role/capabilities, WP-013
+  shortcode-attribute XSS. Each follows the same definition of done (real-CVE corpus, FP run).

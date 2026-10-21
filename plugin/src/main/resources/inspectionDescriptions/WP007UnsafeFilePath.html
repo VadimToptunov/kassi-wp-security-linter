@@ -1,0 +1,26 @@
+<html>
+<body>
+<p>Reports request data (<code>$_GET</code>, <code>$_POST</code>, <code>$_REQUEST</code>, file names from
+<code>$_FILES</code>, REST parameters) that reaches the path argument of <code>unlink()</code>,
+<code>file_get_contents()</code>, <code>readfile()</code>, <code>fopen()</code>, <code>copy()</code>,
+<code>rename()</code>, <code>file_put_contents()</code>, <code>wp_delete_file()</code> or
+<code>include</code>/<code>require</code> (CWE-22, Path Traversal).</p>
+<p>A value like <code>../../wp-config.php</code> lets an attacker read, overwrite, delete or execute
+files outside the intended directory.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>$file = sanitize_text_field( wp_unslash( $_POST['file'] ) );
+unlink( WP_CONTENT_DIR . '/uploads/myplugin/' . $file );</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>$file = sanitize_file_name( wp_unslash( $_POST['file'] ) );
+unlink( WP_CONTENT_DIR . '/uploads/myplugin/' . $file );</code></pre>
+
+<p><code>sanitize_text_field()</code> and <code>str_replace( '../', '', … )</code> do not prevent
+traversal. <code>basename()</code>, <code>sanitize_file_name()</code>, <code>realpath()</code>, and an
+allow-list (<code>in_array</code>) or <code>validate_file()</code> check do. The flow is followed
+inside one function only.</p>
+<!-- tooltip end -->
+<p>Rule WP-007 · CWE-22 · see the kassi-wp-rules repository for references.</p>
+</body>
+</html>

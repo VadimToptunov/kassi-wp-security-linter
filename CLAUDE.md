@@ -12,7 +12,8 @@ open are recorded in `DECISIONS.md`.
   reads them. Only YAML-listed functions count as sanitizers.
 - `core/` imports nothing from IntelliJ, the PHP plugin or `plugin/` (`ModuleBoundaryTest`).
   `core` analyses run over `core.ast.AstNode`; `plugin/psi/PhpPsiAstNode` is the PSI adapter.
-- No rules outside the v0.1 list (WP-001..WP-008); everything else goes in `BACKLOG.md`.
+- New rules only when the user asks; each follows the definition of done (real-CVE corpus, FP run).
+  v0.1 = WP-001..WP-008; Stage 5 adds WP-009..WP-013 (user decision 2026-10-21, see DECISIONS.md).
 - Never weaken a rule to pass the corpus; tighten it or log the case in `FALSE_POSITIVES.md`.
 - No schema change without updating the validator and its tests.
 - No `@Deprecated` platform API; check the SDK docs, not memory.
@@ -39,7 +40,8 @@ Versions are pinned in `gradle.properties` with their source. Re-check them upst
   resolution, handler facts), `check/` (per-rule logic over AstNode; `Checks` is the
   rule id → `FileCheck` registry and the headless entry point), `flow/` (intra-procedural taint).
 - `plugin/`: `psi/` (adapter), `rules/` (built-in rule base from resources), `inspections/` (thin PSI
-  visitors + `Inspections.byRuleId`), `fixes/`; `report/` and `settings/` come in Stage 4.
+  visitors + `Inspections.byRuleId`), `fixes/`, `report/` (Tools | Kassi WP Security Report),
+  `settings/` (excluded paths, rule pack; per-project `ProjectRuleBase`).
 - `rules/`: git submodule → `kassi-wp-rules` (public, CC BY 4.0). Copied into the plugin's resources at build time.
 - `corpus/cases/`: git submodule → `kassi-wp-corpus` (public, GPL excerpts). `CorpusAcceptanceTest`
   enforces vulnerable → finding, fixed → silent for every rule reference.

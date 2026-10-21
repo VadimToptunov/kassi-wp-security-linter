@@ -83,11 +83,14 @@ intellijPlatform {
 val rulesSourceDir = rootProject.layout.projectDirectory.dir("rules/rules")
 val generatedRuleResources = layout.buildDirectory.dir("generated/rule-resources")
 val generateRuleResources by tasks.registering {
-    description = "Copies kassi-wp-rules YAML into plugin resources (kassi/wp-rules/)."
+    description = "Copies kassi-wp-rules YAML into plugin resources (kassi/wp-rules/) and records the plugin version."
     inputs.dir(rulesSourceDir).withPropertyName("rules")
     outputs.dir(generatedRuleResources)
     val src = rulesSourceDir.asFile
     val out = generatedRuleResources.map { it.dir("kassi/wp-rules").asFile }
+    // The report prints the plugin version; baked in so no plugin-descriptor API is needed at runtime.
+    val pluginVersion = providers.gradleProperty("pluginVersion")
+    inputs.property("pluginVersion", pluginVersion)
     doLast {
         val target = out.get()
         target.deleteRecursively()
@@ -97,6 +100,7 @@ val generateRuleResources by tasks.registering {
         require(files.map { it.name }.toSet().size == files.size) { "Duplicate rule file names in $src" }
         files.forEach { it.copyTo(target.resolve(it.name)) }
         target.resolve("index.txt").writeText(files.joinToString("\n", postfix = "\n") { it.name })
+        target.parentFile.resolve("plugin-version.txt").writeText(pluginVersion.get())
     }
 }
 sourceSets.main {
