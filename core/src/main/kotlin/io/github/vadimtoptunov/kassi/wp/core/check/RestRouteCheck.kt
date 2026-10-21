@@ -3,6 +3,10 @@ package io.github.vadimtoptunov.kassi.wp.core.check
 import io.github.vadimtoptunov.kassi.wp.core.ast.AstKind
 import io.github.vadimtoptunov.kassi.wp.core.ast.AstNode
 import io.github.vadimtoptunov.kassi.wp.core.ast.AstRole
+import io.github.vadimtoptunov.kassi.wp.core.ast.ancestors
+import io.github.vadimtoptunov.kassi.wp.core.hooks.CallTarget
+import io.github.vadimtoptunov.kassi.wp.core.hooks.Callables
+import io.github.vadimtoptunov.kassi.wp.core.hooks.HandlerFacts
 import io.github.vadimtoptunov.kassi.wp.core.model.Rule
 
 /**
@@ -22,6 +26,8 @@ import io.github.vadimtoptunov.kassi.wp.core.model.Rule
  *  - `default_methods`          methods WordPress assumes when `methods` is omitted
  *  - `method_constants`         `Class::CONST` → comma-separated methods
  *  - `open_permission_callbacks` callback names that always allow access
+ *  - `privileged_sinks` / `capability_checks` escalate an always-true callback from weak to a warning
+ *    when the route handler (same file) itself calls a privileged sink with no capability check
  */
 class RestRouteCheck(private val rule: Rule) {
     private val registrars = rule.source.map { it.lowercase() }.toSet()
@@ -30,6 +36,8 @@ class RestRouteCheck(private val rule: Rule) {
     private val methodConstants = rule.params.stringMap("method_constants")
         .mapKeys { it.key.lowercase() }.mapValues { splitMethods(it.value) }
     private val openCallbacks = rule.params.strings("open_permission_callbacks").map { it.lowercase() }.toSet()
+    private val privilegedSinks = CallTarget.parseAll(rule.params.strings("privileged_sinks"))
+    private val capabilityChecks = CallTarget.parseAll(rule.params.strings("capability_checks"))
 
     init {
         require(readOnly.isNotEmpty() && defaultMethods.isNotEmpty()) {
@@ -94,16 +102,37 @@ class RestRouteCheck(private val rule: Rule) {
         }
 
         if (methods == null || readOnlyRoute || !isAlwaysTrue(callback)) return null
-        // Weak: an always-true callback is also how intentionally public write routes are declared
-        // (form submissions, signed webhooks/handshakes that authenticate inside the handler). Telling
-        // those apart from CVE-2022-0218 needs the handler body, which v0.1 does not follow
-        // (see DECISIONS.md, FALSE_POSITIVES.md).
+        // Escalate when the route handler is in this file and provably does something privileged
+        // (params.privileged_sinks) without a capability check of its own.
+        privilegedSinkOf(entries["callback"], reportOn)?.let { sink ->
+            return Finding(
+                rule.id, callback,
+                "permission_callback always allows access on a state-changing REST route${methodsLabel(methods)} " +
+                    "whose handler calls $sink() without a capability check: anyone can call it",
+            )
+        }
+        // Otherwise weak: an always-true callback is also how intentionally public write routes are
+        // declared (form submissions, signed handshakes that authenticate inside the handler), and the
+        // handler is not resolvable here (see DECISIONS.md, FALSE_POSITIVES.md).
         return Finding(
             rule.id, callback,
             "permission_callback always allows access on a state-changing REST route${methodsLabel(methods)}. " +
                 "Unless the handler authenticates the request itself, anyone can call it",
             weak = true,
         )
+    }
+
+    private fun privilegedSinkOf(handlerRef: AstNode?, site: AstNode): String? {
+        if (handlerRef == null || privilegedSinks.isEmpty()) return null
+        val file = site.ancestors().lastOrNull() ?: return null
+        val callables = Callables(file)
+        val handler = callables.resolve(handlerRef, site) ?: return null
+        val facts = HandlerFacts(handler, callables)
+        if (facts.anyMatch(capabilityChecks)) return null
+        // Only sinks in the handler's own body escalate. Public routes that authenticate with a request
+        // secret (Jetpack connection, WooCommerce QR login) reach their writes through helpers.
+        val sink = facts.ownCalls.firstOrNull { c -> privilegedSinks.any { it.matches(c) } } ?: return null
+        return privilegedSinks.first { it.matches(sink) }.label
     }
 
     private fun methodsLabel(methods: Set<String>?): String =

@@ -1,0 +1,34 @@
+<html>
+<body>
+<p>Reports an AJAX (<code>wp_ajax_*</code>) or <code>admin_post_*</code> handler that changes state
+(options, users, posts, database rows, files, plugins) without calling <code>current_user_can()</code>
+(CWE-862, Missing Authorization).</p>
+<p>These hooks only require a logged-in user. Without a capability check, any subscriber can trigger
+the action.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>add_action( 'wp_ajax_myplugin_save', 'myplugin_save' );
+function myplugin_save() {
+    check_ajax_referer( 'myplugin_save' );
+    update_option( 'myplugin_settings', wp_unslash( $_POST['settings'] ) );
+    wp_send_json_success();
+}</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>function myplugin_save() {
+    check_ajax_referer( 'myplugin_save' );
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error( null, 403 );
+    }
+    update_option( 'myplugin_settings', wp_unslash( $_POST['settings'] ) );
+    wp_send_json_success();
+}</code></pre>
+
+<p>The handler must be in the same file as its <code>add_action()</code> call. A capability check in
+the handler, or in a same-file helper it calls, silences the inspection. Updating the current
+user's own meta is not reported. Handlers that are also registered on a <code>nopriv</code> hook are
+covered by WP-003.</p>
+<!-- tooltip end -->
+<p>Rule WP-001 · CWE-862 · see the kassi-wp-rules repository for references.</p>
+</body>
+</html>

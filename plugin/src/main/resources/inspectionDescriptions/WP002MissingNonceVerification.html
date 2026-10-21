@@ -1,0 +1,36 @@
+<html>
+<body>
+<p>Reports an AJAX (<code>wp_ajax_*</code>) or <code>admin_post_*</code> handler that changes state
+without verifying a nonce with <code>check_ajax_referer()</code>, <code>check_admin_referer()</code> or
+<code>wp_verify_nonce()</code> (CWE-352, Cross-Site Request Forgery).</p>
+<p>Without a nonce, another site can make a logged-in administrator's browser send the request.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>add_action( 'admin_post_myplugin_delete', 'myplugin_delete' );
+function myplugin_delete() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_die();
+    }
+    delete_option( 'myplugin_settings' );
+    wp_safe_redirect( admin_url() );
+    exit;
+}</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>function myplugin_delete() {
+    check_admin_referer( 'myplugin_delete' );
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_die();
+    }
+    delete_option( 'myplugin_settings' );
+    wp_safe_redirect( admin_url() );
+    exit;
+}</code></pre>
+
+<p>A capability check does not stop CSRF: an attacker's page acts with the victim's capabilities.
+The handler must be in the same file as its <code>add_action()</code> call. Updating the current
+user's own meta is not reported.</p>
+<!-- tooltip end -->
+<p>Rule WP-002 · CWE-352 · see the kassi-wp-rules repository for references.</p>
+</body>
+</html>

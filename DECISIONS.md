@@ -68,3 +68,29 @@ Closed before coding (2026-10-20).
 - **Corpus**: 8 new cases from real CVEs (3 SQLi, 3 reflected XSS, 2 open redirect). Excerpts were
   generated verbatim by line range from SVN tags, and every file passes `php -l`. NVD's fixed version
   for CVE-2022-23911/23912 is off by one (1.4.8, not 1.4.7); recorded in meta.yml.
+
+## Stage 3 decisions
+
+- **Hook handler discovery (`core/hooks`)**: `add_action(<hook>, <callback>)` with the callback
+  resolved **in the same file**: a named function, a `$this` / `self` / `static` / `__CLASS__` /
+  `X::class` / `'Class'` method, `'Class::method'`, or an inline closure. The hook name's static
+  prefix folds literal concatenations (`'wp_ajax_' . 'x'`). A handler is analysed together with one
+  level of same-file helpers (`$this->x()`, `self::x()`, `x()`), for both sinks and checks.
+- **Call patterns in YAML** (`CallTarget`): `fn`, `recv->method`, `->method`, with `*` wildcards.
+  Wildcards exist because capability and nonce wrappers usually live in files the analysis does not
+  see. This tightens precision; it is not an arbitrary-function sanitizer.
+- **WP-001**: a nonce without a capability check is **weak**. A missing check on an `endpoint_prefixes`-only
+  handler is a warning. The current user's own meta (`update_user_meta(get_current_user_id(), …)`)
+  is not privileged. Handlers also on nopriv hooks are left to WP-003.
+- **WP-002**: same discovery; handlers also on nopriv hooks are skipped (public endpoints).
+- **WP-003**: the privileged-sink list deliberately excludes what public forms legitimately do
+  (`wp_insert_post`, `$wpdb->insert`, `wp_create_user`, uploads, login cookies). A nonce is not
+  authentication. `hash_equals` / `hash_hmac` (one-time-token flows) are.
+- **WP-004 escalation**: an always-true callback on a write route becomes a warning when the handler
+  (same file) itself calls a privileged sink with no capability check. Sinks reached only through
+  helpers keep it weak.
+- **`Checks` registry** in core (added during Stage 2 review) is the headless entry point. Tests pin
+  rule base = engine checks = plugin inspections.
+- **Corpus**: 6 new cases (CVE-2023-6966, CVE-2025-3063, CVE-2023-0554, CVE-2023-6968,
+  CVE-2021-4362, CVE-2025-2266). Shopper Approved 2.1 has no SVN tag, so its vulnerable side comes
+  from the release zip (noted in its meta.yml).

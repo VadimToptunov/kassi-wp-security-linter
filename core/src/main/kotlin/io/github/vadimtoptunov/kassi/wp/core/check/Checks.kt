@@ -25,6 +25,23 @@ object Checks {
         "WP-005" to ::SqlInjectionCheck,
         "WP-006" to ::UnescapedOutputCheck,
         "WP-008" to ::UnsafeRedirectCheck,
+        "WP-001" to { rule ->
+            HookHandlerCheck(rule) { h, hook, sink, weak ->
+                "Handler ${HookHandlerCheck.handlerLabel(h)} (hook $hook) calls $sink() without a capability check (current_user_can)" +
+                    if (weak) ". It verifies a nonce, so it is exploitable only if that nonce reaches lower-privileged users" else ""
+            }
+        },
+        "WP-002" to { rule ->
+            HookHandlerCheck(rule) { h, hook, sink, _ ->
+                "Handler ${HookHandlerCheck.handlerLabel(h)} (hook $hook) calls $sink() without nonce verification " +
+                    "(check_ajax_referer, check_admin_referer, wp_verify_nonce)"
+            }
+        },
+        "WP-003" to { rule ->
+            HookHandlerCheck(rule) { h, hook, sink, _ ->
+                "Unauthenticated handler ${HookHandlerCheck.handlerLabel(h)} (hook $hook) calls $sink() with no capability check: anyone can trigger it"
+            }
+        },
     )
 
     val implementedRuleIds: Set<String> get() = factories.keys

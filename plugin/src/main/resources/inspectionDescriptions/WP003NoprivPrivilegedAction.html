@@ -1,0 +1,33 @@
+<html>
+<body>
+<p>Reports a handler registered on <code>wp_ajax_nopriv_*</code> or <code>admin_post_nopriv_*</code>
+(reachable by visitors who are not logged in) that performs a privileged action: changing options,
+other users, roles or capabilities, deleting or moving files, or managing plugins and themes
+(CWE-862, Missing Authorization).</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>add_action( 'wp_ajax_myplugin_settings', 'myplugin_settings' );
+add_action( 'wp_ajax_nopriv_myplugin_settings', 'myplugin_settings' );
+function myplugin_settings() {
+    update_option( 'myplugin_settings', wp_unslash( $_POST['settings'] ) );
+    wp_send_json_success();
+}</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>add_action( 'wp_ajax_myplugin_settings', 'myplugin_settings' );
+function myplugin_settings() {
+    check_ajax_referer( 'myplugin_settings' );
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error( null, 403 );
+    }
+    update_option( 'myplugin_settings', wp_unslash( $_POST['settings'] ) );
+    wp_send_json_success();
+}</code></pre>
+
+<p>A nonce is not a substitute here: nonces for logged-out visitors are the same for everyone.
+Actions that public forms legitimately perform (creating posts or entries, registering users,
+uploading files) are not reported.</p>
+<!-- tooltip end -->
+<p>Rule WP-003 · CWE-862 · see the kassi-wp-rules repository for references.</p>
+</body>
+</html>

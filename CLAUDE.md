@@ -35,7 +35,8 @@ Versions are pinned in `gradle.properties` with their source. Re-check them upst
 
 ## Layout
 - `core/`: pure Kotlin. `ast/` (AstNode + traversal), `model/` (Rule), `kb/` (YAML loader +
-  validator, `KnowledgeBase.loadDirectory`), `check/` (per-rule logic over AstNode; `Checks` is the
+  validator, `KnowledgeBase.loadDirectory`), `hooks/` (add_action discovery, same-file callable
+  resolution, handler facts), `check/` (per-rule logic over AstNode; `Checks` is the
   rule id → `FileCheck` registry and the headless entry point), `flow/` (intra-procedural taint).
 - `plugin/`: `psi/` (adapter), `rules/` (built-in rule base from resources), `inspections/` (thin PSI
   visitors + `Inspections.byRuleId`), `fixes/`; `report/` and `settings/` come in Stage 4.

@@ -28,6 +28,7 @@ import com.jetbrains.php.lang.psi.elements.Method
 import com.jetbrains.php.lang.psi.elements.MethodReference
 import com.jetbrains.php.lang.psi.elements.NewExpression
 import com.jetbrains.php.lang.psi.elements.Parameter
+import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.elements.PhpEchoStatement
 import com.jetbrains.php.lang.psi.elements.PhpExpression
 import com.jetbrains.php.lang.psi.elements.PhpPrintExpression
@@ -176,6 +177,7 @@ class PhpPsiAstNode private constructor(val psi: PsiElement) : AstNode {
 
         private fun kindOf(psi: PsiElement): AstKind = when (psi) {
             is PhpFile -> AstKind.FILE
+            is PhpClass -> AstKind.CLASS
             is Method -> AstKind.METHOD
             is Function -> if (psi.isClosure) AstKind.CLOSURE else AstKind.FUNCTION
             is MethodReference -> if (psi.isStatic) AstKind.STATIC_CALL else AstKind.METHOD_CALL
@@ -214,6 +216,7 @@ class PhpPsiAstNode private constructor(val psi: PsiElement) : AstNode {
 
         private fun nameOf(psi: PsiElement, kind: AstKind): String? = when (kind) {
             AstKind.FUNCTION, AstKind.METHOD -> (psi as Function).name
+            AstKind.CLASS -> (psi as PhpClass).name
             AstKind.CALL, AstKind.METHOD_CALL, AstKind.STATIC_CALL -> (psi as FunctionReference).name
             AstKind.NEW -> (psi as NewExpression).classReference?.name
             AstKind.VARIABLE -> (psi as Variable).name.takeIf { it.isNotEmpty() }
