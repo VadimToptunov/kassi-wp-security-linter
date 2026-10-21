@@ -1,5 +1,6 @@
 package io.github.vadimtoptunov.kassi.wp.core.kb
 
+import io.github.vadimtoptunov.kassi.wp.core.check.Checks
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -25,5 +26,12 @@ class RuleBaseTest {
             assertEquals("${rule.id}.yml", f.name)
             assertTrue(rule.references.all { it.corpus?.startsWith("${rule.id}/") == true }, "${rule.id}: every reference needs a corpus case of this rule")
         }
+    }
+
+    @Test
+    fun `every rule in the rule base has a check implementation in the engine`() {
+        val kb = KnowledgeBase.loadDirectory(rulesDir)
+        assertEquals(emptyList(), Checks.unimplemented(kb))
+        assertEquals(kb.rules.size, Checks.forRules(kb).size)
     }
 }

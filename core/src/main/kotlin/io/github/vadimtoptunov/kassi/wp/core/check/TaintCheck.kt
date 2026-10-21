@@ -10,7 +10,7 @@ import io.github.vadimtoptunov.kassi.wp.core.model.Rule
  * Base for the "input → sink" rules (WP-005, WP-006, WP-008): the rule supplies which node arguments
  * are sinks and how to word the finding; [TaintAnalyzer] proves the flow.
  */
-abstract class TaintCheck(protected val rule: Rule) {
+abstract class TaintCheck(protected val rule: Rule) : FileCheck {
     protected open fun callOverride(call: AstNode, eval: (AstNode) -> Taint?): TaintAnalyzer.Override? = null
 
     private val analyzer by lazy { TaintAnalyzer(TaintSpec.of(rule), ::callOverride) }
@@ -23,7 +23,7 @@ abstract class TaintCheck(protected val rule: Rule) {
     protected open fun quickFix(sink: AstNode): String? = null
 
     /** Analyses every scope of a file. */
-    fun checkFile(file: AstNode): List<Finding> =
+    override fun checkFile(file: AstNode): List<Finding> =
         analyzer.scopes(file).flatMap { scope ->
             analyzer.analyze(scope, ::sinkArguments).map { hit ->
                 Finding(rule.id, hit.argument, message(hit.sink, hit.taint), quickFix = quickFix(hit.sink))

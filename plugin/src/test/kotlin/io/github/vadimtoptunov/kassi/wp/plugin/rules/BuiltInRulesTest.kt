@@ -1,6 +1,7 @@
 package io.github.vadimtoptunov.kassi.wp.plugin.rules
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import io.github.vadimtoptunov.kassi.wp.core.check.Checks
 import io.github.vadimtoptunov.kassi.wp.plugin.inspections.Inspections
 
 /** The rule base packaged into the plugin loads and matches what plugin.xml registers. */
@@ -18,5 +19,9 @@ class BuiltInRulesTest : BasePlatformTestCase() {
             assertEquals("inspectionDescriptions/${tool.shortName}.html", overlay.descriptionHtml)
             assertNotNull("${overlay.descriptionHtml} missing", javaClass.classLoader.getResource(overlay.descriptionHtml))
         }
+    }
+
+    fun testPluginInspectionsCoverExactlyTheEngineChecks() {
+        assertEquals(Checks.implementedRuleIds, Inspections.byRuleId.keys)
     }
 }
