@@ -17,11 +17,16 @@
       <li><b>WP-006</b> Request data output without escaping (CWE-79)</li>
       <li><b>WP-007</b> File path built from request data (CWE-22)</li>
       <li><b>WP-008</b> <code>wp_redirect()</code> to a URL from request data (CWE-601)</li>
+      <li><b>WP-009</b> PHP object injection via <code>unserialize()</code> of request data (CWE-502)</li>
+      <li><b>WP-010</b> Server-side request forgery via <code>wp_remote_*()</code> (CWE-918)</li>
+      <li><b>WP-011</b> Uploaded file stored without a file type check (CWE-434)</li>
+      <li><b>WP-012</b> Request data decides a user role or capabilities (CWE-269)</li>
+      <li><b>WP-013</b> Shortcode attributes output without escaping, i.e. stored XSS (CWE-79)</li>
     </ul>
     <h3>Built for precision</h3>
     <ul>
-      <li>Follows request data through assignments, concatenation, interpolation and loops within a function,
-      and stays silent when a flow is not proven.</li>
+      <li>Follows request data through assignments, concatenation, interpolation, branches and loops within a
+      function, and stays silent when a flow is not proven.</li>
       <li>Recognises the WordPress defences: <code>esc_*</code>, <code>wp_kses*</code>, <code>prepare()</code>,
       <code>current_user_can()</code>, nonces, <code>wp_safe_redirect()</code>, allow-lists.</li>
       <li>Safe quick-fixes only where they cannot change who can reach your code.</li>
@@ -39,7 +44,7 @@
     ]]></description>
 
     <change-notes><![CDATA[
-    <p><b>0.1.0</b>: first release. Eight inspections (WP-001 to WP-008), project report (Markdown and JSON),
+    <p><b>0.1.0</b>: first release. Thirteen inspections (WP-001 to WP-013), project report (Markdown and JSON),
     path exclusions and an optional project rule pack.</p>
     ]]></change-notes>
 
@@ -82,6 +87,26 @@
                          displayName="WP-008 wp_redirect() to a URL from request data"
                          groupName="Kassi WordPress Security" enabledByDefault="true" level="WARNING"
                          implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP008UnsafeRedirectInspection"/>
+        <localInspection language="PHP" shortName="WP009ObjectInjection"
+                         displayName="WP-009 PHP object injection via unserialize() of request data"
+                         groupName="Kassi WordPress Security" enabledByDefault="true" level="ERROR"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP009ObjectInjectionInspection"/>
+        <localInspection language="PHP" shortName="WP010ServerSideRequestForgery"
+                         displayName="WP-010 Server-side request to a URL from request data (SSRF)"
+                         groupName="Kassi WordPress Security" enabledByDefault="true" level="WARNING"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP010ServerSideRequestForgeryInspection"/>
+        <localInspection language="PHP" shortName="WP011UnsafeFileUpload"
+                         displayName="WP-011 Uploaded file stored without a file type check"
+                         groupName="Kassi WordPress Security" enabledByDefault="true" level="ERROR"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP011UnsafeFileUploadInspection"/>
+        <localInspection language="PHP" shortName="WP012PrivilegeEscalation"
+                         displayName="WP-012 Request data decides a user role or capabilities"
+                         groupName="Kassi WordPress Security" enabledByDefault="true" level="ERROR"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP012PrivilegeEscalationInspection"/>
+        <localInspection language="PHP" shortName="WP013ShortcodeAttributeXss"
+                         displayName="WP-013 Shortcode attributes output without escaping (stored XSS)"
+                         groupName="Kassi WordPress Security" enabledByDefault="true" level="WARNING"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP013ShortcodeAttributeXssInspection"/>
     </extensions>
 
     <actions>

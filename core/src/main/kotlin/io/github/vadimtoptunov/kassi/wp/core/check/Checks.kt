@@ -26,6 +26,11 @@ object Checks {
         "WP-006" to ::UnescapedOutputCheck,
         "WP-007" to ::UnsafePathCheck,
         "WP-008" to ::UnsafeRedirectCheck,
+        "WP-009" to ::ObjectInjectionCheck,
+        "WP-010" to ::SsrfCheck,
+        "WP-011" to ::UnsafeUploadCheck,
+        "WP-012" to ::PrivilegeEscalationCheck,
+        "WP-013" to ::ShortcodeOutputCheck,
         "WP-001" to { rule ->
             HookHandlerCheck(rule) { h, hook, sink, weak ->
                 "Handler ${HookHandlerCheck.handlerLabel(h)} (hook $hook) calls $sink() without a capability check (current_user_can)" +

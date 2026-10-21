@@ -1,10 +1,13 @@
 # Backlog
 
-Stage 5 (user decision 2026-10-21) takes the first five items below as WP-009..WP-013.
+Done in Stage 5 (2026-10-21): object injection (WP-009), SSRF (WP-010), unsafe uploads (WP-011),
+privilege escalation via role or capabilities (WP-012), and shortcode-attribute XSS (WP-013).
 
-- Object injection via `unserialize` on input (CWE-502)
-- Privilege escalation via `wp_capabilities` meta / `set_role` (CWE-269)
-- Unsafe uploads: `upload_mimes` filter, `move_uploaded_file` without type checks (CWE-434)
-- Unsafe shortcodes: unescaped attributes, shortcode output (CWE-79)
-- SSRF via `wp_remote_get` / `wp_remote_post` with input URLs (CWE-918)
-- Inter-procedural taint (v0.1 is intra-procedural only)
+Still open:
+- Inter-procedural taint: helpers in other functions or files, `$this->property` flows, values
+  stored in the database (second-order SQLi, stored XSS through options or meta).
+- realpath() + strpos() prefix guards on a derived variable (WP-007, CVE-2023-5355).
+- Checks made in other functions for WP-011 (CF7-style validation filters).
+- `header('Location: …')` as a WP-008 sink, and `$wp_filesystem` methods as WP-007 sinks.
+- Output context awareness for WP-006 and WP-013 (attribute vs element vs URL vs JS).
+- `upload_mimes` filter widening (part of the original unsafe-uploads item).

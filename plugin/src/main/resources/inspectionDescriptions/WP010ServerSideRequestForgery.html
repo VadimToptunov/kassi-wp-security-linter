@@ -1,0 +1,19 @@
+<html>
+<body>
+<p>Reports a URL from request data that is passed to <code>wp_remote_get()</code>, <code>wp_remote_post()</code>, <code>wp_remote_request()</code>, <code>wp_remote_head()</code> or <code>download_url()</code> (CWE-918, Server-Side Request Forgery). The server can be made to reach internal services, cloud metadata endpoints or the local network.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>$response = wp_remote_get( esc_url_raw( $_POST['image_url'] ) );</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>$url = wp_http_validate_url( wp_unslash( $_POST['image_url'] ) );
+if ( ! $url ) {
+    wp_die();
+}
+$response = wp_safe_remote_get( $url );</code></pre>
+
+<p><code>esc_url_raw()</code> cleans characters, not destinations. <code>wp_safe_remote_*()</code> rejects private and loopback addresses. An allow-list check on a derived host variable is not recognised.</p>
+<!-- tooltip end -->
+<p>Rule WP-010 · CWE-918 · see the kassi-wp-rules repository for references.</p>
+</body>
+</html>

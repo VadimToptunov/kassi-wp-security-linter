@@ -15,6 +15,11 @@ v0.1 inspections:
 | WP-006 | Unescaped output | 79 |
 | WP-007 | Unsafe file path from request input | 22 |
 | WP-008 | Unsafe redirect | 601 |
+| WP-009 | PHP object injection via `unserialize()` | 502 |
+| WP-010 | Server-side request forgery via `wp_remote_*()` | 918 |
+| WP-011 | Uploaded file stored without a type check | 434 |
+| WP-012 | Role or capabilities from request data | 269 |
+| WP-013 | Shortcode attributes output without escaping | 79 |
 
 Every rule is backed by at least one real, fixed CVE in
 [kassi-wp-corpus](https://github.com/VadimToptunov/kassi-wp-corpus): the vulnerable code must be

@@ -1,0 +1,20 @@
+<html>
+<body>
+<p>Reports <code>move_uploaded_file()</code> in a function that never checks the file type (CWE-434, Unrestricted Upload of File with Dangerous Type). An uploaded <code>.php</code> file in a web-accessible folder is remote code execution.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>$target = $dir . '/' . $_FILES['font']['name'];
+move_uploaded_file( $_FILES['font']['tmp_name'], $target );</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>$check = wp_check_filetype_and_ext( $_FILES['font']['tmp_name'], $_FILES['font']['name'], array( 'woff2' =&gt; 'font/woff2' ) );
+if ( ! $check['ext'] ) {
+    wp_die( 'File type not allowed' );
+}
+move_uploaded_file( $_FILES['font']['tmp_name'], $dir . '/' . sanitize_file_name( $_FILES['font']['name'] ) );</code></pre>
+
+<p>Any type check in the same function silences the inspection: <code>wp_check_filetype(_and_ext)</code>, <code>wp_handle_upload()</code>, an image or MIME sniff, or an extension read with <code>pathinfo()</code>. A destination with a fixed literal extension is not reported. Prefer <code>wp_handle_upload()</code>.</p>
+<!-- tooltip end -->
+<p>Rule WP-011 · CWE-434 · see the kassi-wp-rules repository for references.</p>
+</body>
+</html>
