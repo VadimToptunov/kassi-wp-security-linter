@@ -7,5 +7,8 @@ object Inspections {
     val byRuleId: Map<String, LocalInspectionTool>
         get() = mapOf(
             WP004UnprotectedRestRouteInspection.RULE_ID to WP004UnprotectedRestRouteInspection(),
+            WP005UnpreparedSqlInspection.RULE_ID to WP005UnpreparedSqlInspection(),
+            WP006UnescapedOutputInspection.RULE_ID to WP006UnescapedOutputInspection(),
+            WP008UnsafeRedirectInspection.RULE_ID to WP008UnsafeRedirectInspection(),
         )
 }

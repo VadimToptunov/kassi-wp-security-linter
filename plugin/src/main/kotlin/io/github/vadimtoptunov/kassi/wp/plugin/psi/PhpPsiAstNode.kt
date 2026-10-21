@@ -18,6 +18,7 @@ import com.jetbrains.php.lang.psi.elements.ClassConstantReference
 import com.jetbrains.php.lang.psi.elements.ClassReference
 import com.jetbrains.php.lang.psi.elements.ConstantReference
 import com.jetbrains.php.lang.psi.elements.FieldReference
+import com.jetbrains.php.lang.psi.elements.ForeachStatement
 import com.jetbrains.php.lang.psi.elements.Function
 import com.jetbrains.php.lang.psi.elements.FunctionReference
 import com.jetbrains.php.lang.psi.elements.GroupStatement
@@ -67,7 +68,7 @@ class PhpPsiAstNode private constructor(val psi: PsiElement) : AstNode {
             if (psi is PsiFile) return null
             val p = psi.parent ?: return null
             // Skip the transparent closure-expression wrapper (see [wrap]) so parent/child stay symmetric.
-            return wrap(if (closureInside(p) != null) p.parent ?: return null else p)
+            return wrap(if (transparentInner(p) != null) p.parent ?: return null else p)
         }
 
     override val children: List<AstNode> by lazy { significantChildren(psi).map(::wrap) }
@@ -96,16 +97,22 @@ class PhpPsiAstNode private constructor(val psi: PsiElement) : AstNode {
             AstRole.KEY -> when {
                 psi is ArrayAccessExpression -> psi.index?.value
                 psi is ArrayHashElement -> unwrapEntryPart(psi.key)
+                psi is ForeachStatement -> psi.key
                 else -> null
             }
             AstRole.VALUE -> when {
                 psi is AssignmentExpression -> psi.value // also SelfAssignmentExpression
+                psi is ForeachStatement -> psi.array
                 psi is ArrayHashElement -> unwrapEntryPart(psi.value)
                 isListArrayValue(psi) -> significantChildren(psi).firstOrNull()
                 psi is UnaryExpression && kind == AstKind.CAST -> psi.value
                 else -> null
             }
-            AstRole.TARGET -> (psi as? AssignmentExpression)?.variable
+            AstRole.TARGET -> when (psi) {
+                is AssignmentExpression -> psi.variable
+                is ForeachStatement -> psi.value
+                else -> null
+            }
             AstRole.LEFT -> when (psi) {
                 is BinaryExpression -> psi.leftOperand
                 is TernaryExpression -> psi.trueVariant
@@ -146,12 +153,22 @@ class PhpPsiAstNode private constructor(val psi: PsiElement) : AstNode {
          * wrapper carries no meaning of its own, so it is made transparent: wrapping it yields the
          * closure itself.
          */
-        fun wrap(psi: PsiElement): PhpPsiAstNode = PhpPsiAstNode(closureInside(psi) ?: psi)
+        fun wrap(psi: PsiElement): PhpPsiAstNode = PhpPsiAstNode(transparentInner(psi) ?: psi)
 
-        private fun closureInside(psi: PsiElement): Function? {
+        /**
+         * Wrapper nodes that carry no meaning of its own, made transparent (wrapping one yields its content):
+         *  - a closure used as a value: an expression node around the [Function];
+         *  - an expression embedded in a string (`"{$a['k']}"`, `"$a[1]"`, `"{$o->p}"`): a nameless
+         *    [Variable] around the real expression.
+         */
+        private fun transparentInner(psi: PsiElement): PsiElement? {
             if (psi is Function) return null
-            val only = significantChildren(psi).singleOrNull() as? Function ?: return null
-            return only.takeIf { it.isClosure && it.textRange == psi.textRange }
+            val only = significantChildren(psi).singleOrNull() ?: return null
+            return when {
+                only is Function -> only.takeIf { it.isClosure && it.textRange == psi.textRange }
+                psi is Variable && psi.parent is StringLiteralExpression && only is PhpExpression -> only
+                else -> null
+            }
         }
 
         private fun significantChildren(psi: PsiElement): List<PsiElement> =
@@ -185,6 +202,7 @@ class PhpPsiAstNode private constructor(val psi: PsiElement) : AstNode {
             is Include -> AstKind.INCLUDE
             is PhpReturn -> AstKind.RETURN
             is If -> AstKind.IF
+            is ForeachStatement -> AstKind.FOREACH
             is GroupStatement -> AstKind.BLOCK
             is Parameter -> AstKind.PARAMETER
             else -> when {

@@ -1,0 +1,22 @@
+<html>
+<body>
+<p>Reports <code>wp_redirect()</code> to a URL that request data controls (CWE-601, Open Redirect).
+An attacker can send a link to your site that forwards the victim to any external site.</p>
+<p><code>wp_safe_redirect()</code> takes the same arguments but only follows hosts on the
+<code>allowed_redirect_hosts</code> list. A quick-fix switches to it.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>wp_redirect( $_GET['redirect_to'] );
+exit;</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>wp_safe_redirect( wp_unslash( $_GET['redirect_to'] ) );
+exit;</code></pre>
+
+<p>Silent when the URL is built on a fixed base (<code>admin_url()</code>, <code>home_url()</code>,
+or <code>add_query_arg()</code> without a URL argument) or checked with <code>wp_validate_redirect()</code>.
+<code>esc_url()</code> does not prevent open redirects.</p>
+<!-- tooltip end -->
+<p>Rule WP-008 · CWE-601 · see the kassi-wp-rules repository for references.</p>
+</body>
+</html>

@@ -1,6 +1,7 @@
 package io.github.vadimtoptunov.kassi.wp.core.kb
 
 import io.github.vadimtoptunov.kassi.wp.core.model.Rule
+import java.io.File
 
 /** One rule file: where it came from (for error messages) and its YAML text. */
 data class RuleSource(val origin: String, val yaml: String)
@@ -21,6 +22,15 @@ class KnowledgeBase private constructor(private val byId: Map<String, Rule>) {
     fun require(id: String): Rule = byId[id] ?: error("rule $id is not in the rule base")
 
     companion object {
+        /** Loads every `*.yml` under [dir] (e.g. a kassi-wp-rules checkout's `rules/` folder). */
+        fun loadDirectory(dir: File): KnowledgeBase {
+            require(dir.isDirectory) { "not a directory: $dir" }
+            return load(
+                dir.walkTopDown().filter { it.isFile && it.extension == "yml" }
+                    .map { RuleSource(it.relativeTo(dir).path, it.readText()) }.toList(),
+            )
+        }
+
         fun load(sources: List<RuleSource>): KnowledgeBase {
             val errors = mutableListOf<String>()
             val byId = linkedMapOf<String, Rule>()

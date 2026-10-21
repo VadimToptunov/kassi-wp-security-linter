@@ -1,0 +1,22 @@
+<html>
+<body>
+<p>Reports request data (<code>$_GET</code>, <code>$_POST</code>, <code>$_REQUEST</code>,
+<code>$_SERVER['REQUEST_URI']</code>, …) that is output with <code>echo</code>, <code>print</code> or
+<code>&lt;?= ?&gt;</code> without an escaping function (CWE-79, Cross-site Scripting).</p>
+<p>Escape for the context: <code>esc_html()</code> for element content, <code>esc_attr()</code> inside
+attributes, <code>esc_url()</code> for URLs, <code>esc_js()</code> in inline JavaScript,
+<code>wp_kses()</code> when some HTML must be allowed.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>&lt;input type="text" name="s" value="&lt;?php echo $_GET['s']; ?&gt;"&gt;</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>&lt;input type="text" name="s" value="&lt;?php echo esc_attr( wp_unslash( $_GET['s'] ) ); ?&gt;"&gt;</code></pre>
+
+<p>v0.1 reports reflected flows (input and output in the same function or template). It does not track
+values stored in the database. It treats <code>sanitize_text_field()</code> as safe, although inside
+an attribute it does not escape quotes.</p>
+<!-- tooltip end -->
+<p>Rule WP-006 · CWE-79 · see the kassi-wp-rules repository for references.</p>
+</body>
+</html>

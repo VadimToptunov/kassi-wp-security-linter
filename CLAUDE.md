@@ -35,7 +35,8 @@ Versions are pinned in `gradle.properties` with their source. Re-check them upst
 
 ## Layout
 - `core/`: pure Kotlin. `ast/` (AstNode + traversal), `model/` (Rule), `kb/` (YAML loader +
-  validator), `check/` (per-rule logic over AstNode), and from Stage 2 `flow/` (intra-procedural taint).
+  validator, `KnowledgeBase.loadDirectory`), `check/` (per-rule logic over AstNode; `Checks` is the
+  rule id → `FileCheck` registry and the headless entry point), `flow/` (intra-procedural taint).
 - `plugin/`: `psi/` (adapter), `rules/` (built-in rule base from resources), `inspections/` (thin PSI
   visitors + `Inspections.byRuleId`), `fixes/`; `report/` and `settings/` come in Stage 4.
 - `rules/`: git submodule → `kassi-wp-rules` (public, CC BY 4.0). Copied into the plugin's resources at build time.

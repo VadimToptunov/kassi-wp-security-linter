@@ -40,3 +40,31 @@ Closed before coding (2026-10-20).
 - **Corpus cases:** CVE-2022-0218 (`'__return_true'`, POST), CVE-2022-0680 (CREATABLE, nested
   endpoint arrays), CVE-2026-9172 (no callback on a route declared GET that deletes data). Snippets
   were checked against plugins.svn.wordpress.org tags and the CVEs against NVD.
+
+## Stage 2 decisions
+
+- **Taint engine (`core/flow`)**: intra-procedural, statements in source order with strong updates,
+  no branch joins. A conditional re-assignment can hide a flow but never invent one. Anything not
+  proven tainted is clean: parameters, properties, unknown function results, closure `use` variables.
+  That is how "a sanitizer counts only if it is in the YAML list" and "if the flow is not proven,
+  stay silent" fit together: an unknown function neither cleans nor carries taint, it ends the
+  proof. Only YAML `passthrough` functions carry taint.
+- **Source notation** in `source:`: `$_GET`, `$_SERVER[REQUEST_URI]` / `$_SERVER[HTTP_*]`,
+  `->get_param` (methods), `name` (functions). `$_SERVER` is a source only for client-controlled keys.
+- **New rule params** (no schema change: `params` is free-form per rule, documented in each check):
+  `passthrough`, `format_functions` (sprintf: taint only via `%s`), `guard_functions` + `terminators`
+  (allow-list guards), `receivers` / `sink_methods` (WP-005), `sink_functions` /
+  `query_arg_functions` (WP-008).
+- **WP-005 includes `$wpdb->prepare()`'s first argument as a sink**: input concatenated into the
+  format string is not escaped. `sanitize_text_field` passes taint through for SQL.
+- **WP-006 is reflected-only** in v0.1 (no DB → output tracking). `sanitize_text_field` counts as
+  safe for output: a known miss in attribute context, accepted for quiet. Output context is not checked.
+- **WP-008**: `esc_url` / `esc_url_raw` pass taint through (they don't restrict the host);
+  `add_query_arg` carries only its base-URL argument's taint. Quick-fix `wp_redirect` →
+  `wp_safe_redirect` (same signature, the documented fix), offered only on proven flows.
+- **Severity → level**: critical (WP-005) = ERROR; high/medium = WARNING.
+- **Adapter**: expressions embedded in strings (`"{$a['k']}"`) are wrapped by PHP PSI in a nameless
+  Variable. The wrapper is now transparent, which the Events Manager corpus case (CVE-2020-35012) needed.
+- **Corpus**: 8 new cases from real CVEs (3 SQLi, 3 reflected XSS, 2 open redirect). Excerpts were
+  generated verbatim by line range from SVN tags, and every file passes `php -l`. NVD's fixed version
+  for CVE-2022-23911/23912 is off by one (1.4.8, not 1.4.7); recorded in meta.yml.

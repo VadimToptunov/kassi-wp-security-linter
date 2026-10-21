@@ -19,5 +19,17 @@
                          displayName="WP-004 REST route without a real permission_callback"
                          groupName="Kassi WordPress Security" enabledByDefault="true" level="WARNING"
                          implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP004UnprotectedRestRouteInspection"/>
+        <localInspection language="PHP" shortName="WP005UnpreparedSql"
+                         displayName="WP-005 SQL built from request data without $wpdb-&gt;prepare()"
+                         groupName="Kassi WordPress Security" enabledByDefault="true" level="ERROR"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP005UnpreparedSqlInspection"/>
+        <localInspection language="PHP" shortName="WP006UnescapedOutput"
+                         displayName="WP-006 Request data output without escaping"
+                         groupName="Kassi WordPress Security" enabledByDefault="true" level="WARNING"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP006UnescapedOutputInspection"/>
+        <localInspection language="PHP" shortName="WP008UnsafeRedirect"
+                         displayName="WP-008 wp_redirect() to a URL from request data"
+                         groupName="Kassi WordPress Security" enabledByDefault="true" level="WARNING"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP008UnsafeRedirectInspection"/>
     </extensions>
 </idea-plugin>
