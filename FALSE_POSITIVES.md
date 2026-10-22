@@ -126,3 +126,14 @@ tightening the rules:
 Remaining known false positives: 17 warnings in the triage sample. They are unreachable classes,
 unrecognised validators, dead branches, standalone legacy scripts and checks in other functions.
 They are accepted for v0.1 and listed in BACKLOG.md.
+
+## Follow-up from the bounty-pipeline triage (2026-10-22)
+
+| Signal | Change |
+| --- | --- |
+| WooCommerce `class-wc-helper.php:1205` WP-008 is nonce-gated | `nonce_checks` for WP-006/WP-008: a nonce verified in the same function makes the finding weak (a crafted link alone cannot trigger it) |
+| contact-form-7 `includes/file.php:65` WP-011 delegates its defence to `wpcf7_antiscript_file_name()` | `filename_neutralisers` for WP-011: a call to a `*antiscript*` / `*neutrali*` helper in the function makes the finding weak |
+| Jetpack Blaze `class-dashboard-rest-controller.php:805` WP-007: `$file = $_FILES['image']; $file['tmp_name']` (a regression from scoping `clean_keys` to `$_FILES`) | Variables holding a `$_FILES` entry are tracked as aliases; their `tmp_name`/`size`/`error`/`name` are clean |
+
+After these changes: the top-20 run has 1 warning (the UpdraftPlus WP-003, triaged above), and the long tail has 52.
+All 25 triaged real weaknesses are still reported; recall is 31/31.

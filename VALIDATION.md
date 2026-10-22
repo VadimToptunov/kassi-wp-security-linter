@@ -23,7 +23,8 @@ finding matches an already-published unauthenticated SQL injection.
 ## 2. False positives on the 20 most popular plugins
 
 `corpus/fetch-popular.sh`, then `./gradlew :plugin:test -Pkassi.fprun --tests '*FalsePositiveRun*'`.
-The run covers 20,124 PHP files. 25 findings remain: 4 warnings and 21 weak. Each is triaged in
+The run covers 20,124 PHP files. 24 findings remain: 1 warning and 23 weak (after the follow-up
+tightening in FALSE_POSITIVES.md). Each is triaged in
 FALSE_POSITIVES.md.
 
 ## 3. Long tail: 138 plugins with 1k–50k installs
@@ -43,21 +44,21 @@ the residual ones from check 1) was triaged by reading the code:
 | TP-LOW: true, negligible impact (notice dismissals, admin-only tools) | 36 |
 | FP: claim false | 41 |
 
-The rules were then **tightened, never weakened** (DECISIONS.md, "Validation"). After that, the run
-gives 124 findings, 55 of them warnings. On the triaged rows that can be matched (99 of 102):
+The rules were then **tightened, never weakened** (DECISIONS.md, "Validation"; FALSE_POSITIVES.md,
+follow-up). After that, the run gives 122 findings, 52 of them warnings. On the triaged rows that can be matched (99 of 102):
 
 | Verdict | Before | After |
 | --- | --- | --- |
 | TP (25) | 23 warnings + 2 weak | unchanged: **no real weakness was lost** |
-| TP-LOW (33) | 25 warnings + 8 weak | 14 warnings + 19 weak |
-| FP (41) | 36 warnings + 5 weak | 17 warnings + 4 weak + 20 no longer reported |
+| TP-LOW (33) | 25 warnings + 8 weak | 13 warnings + 20 weak |
+| FP (41) | 36 warnings + 5 weak | 15 warnings + 5 weak + 21 no longer reported |
 
 Precision of the warning tier on the triaged sample:
-- real weakness: 27% before, **43%** after;
-- claim literally true: 57% before, **69%** after.
+- real weakness: 27% before, **45%** after;
+- claim literally true: 57% before, **71%** after.
 
 ### What the numbers mean
-- The top-20 plugins are mature code. On them the rules are quiet: 4 warnings across 20 plugins.
+- The top-20 plugins are mature code. On them the rules are quiet: 1 warning across 20 plugins.
   The long tail is where the rules have to earn their place. There, roughly 4 in 10 warnings are a
   real weakness, about 3 in 10 are true but harmless, and about 3 in 10 are false positives.
 - The false positives that remain have known mechanisms. Fixing them needs analysis the v0.1 engine

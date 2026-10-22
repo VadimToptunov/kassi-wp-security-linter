@@ -24,6 +24,13 @@ abstract class TaintCheck(protected val rule: Rule) : FileCheck {
      */
     private val adminChecks by lazy { CallTarget.parseAll(rule.params.strings("admin_checks")) }
 
+    /**
+     * `params.nonce_checks`: for rules whose attack needs a victim to open a crafted request (reflected
+     * XSS, open redirect), a nonce verified in the same function means the attacker cannot craft a
+     * working link, so the finding is weak.
+     */
+    private val nonceChecks by lazy { CallTarget.parseAll(rule.params.strings("nonce_checks")) }
+
     /** Argument nodes of [node] that are sinks for this rule; empty when [node] is not a sink. */
     protected abstract fun sinkArguments(node: AstNode): List<AstNode>
 
@@ -34,10 +41,16 @@ abstract class TaintCheck(protected val rule: Rule) : FileCheck {
     /** Analyses every scope of a file. */
     override fun checkFile(file: AstNode): List<Finding> =
         analyzer.scopes(file).flatMap { scope ->
-            val gated = adminChecks.isNotEmpty() && HandlerFacts.callsIn(scope).any { c -> adminChecks.any { it.matches(c) } }
+            val calls = HandlerFacts.callsIn(scope)
+            val gated = adminChecks.isNotEmpty() && calls.any { c -> adminChecks.any { it.matches(c) } }
+            val nonced = nonceChecks.isNotEmpty() && calls.any { c -> nonceChecks.any { it.matches(c) } }
             analyzer.analyze(scope, ::sinkArguments).map { hit ->
-                val msg = message(hit.sink, hit.taint) + if (gated) ". Weak: the function checks a capability, so only privileged users reach it" else ""
-                Finding(rule.id, hit.argument, msg, weak = gated, quickFix = quickFix(hit.sink))
+                val suffix = when {
+                    gated -> ". Weak: the function checks a capability, so only privileged users reach it"
+                    nonced -> ". Weak: the function verifies a nonce, so a crafted link alone cannot trigger it"
+                    else -> ""
+                }
+                Finding(rule.id, hit.argument, message(hit.sink, hit.taint) + suffix, weak = gated || nonced, quickFix = quickFix(hit.sink))
             }
         }
 }

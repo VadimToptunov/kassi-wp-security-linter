@@ -96,7 +96,7 @@ class TaintAnalyzer(
                     val target = n.child(AstRole.TARGET)
                     if (target != null) {
                         val t = value?.let(::eval)
-                        assign(target, if (n.kind == AstKind.CONCAT_ASSIGNMENT) Taint.union(listOf(eval(target), t)) else t)
+                        assign(target, if (n.kind == AstKind.CONCAT_ASSIGNMENT) Taint.union(listOf(eval(target), t)) else t, value)
                     }
                 }
                 AstKind.FOREACH -> {
@@ -197,7 +197,15 @@ class TaintAnalyzer(
 
         fun normalize(text: String) = text.filterNot { it.isWhitespace() }.replace('"', '\'')
 
-        fun assign(target: AstNode, t: Taint?) {
+        /** Variables holding one `$_FILES` entry (`$f = $_FILES['image']`). */
+        val filesAliases = mutableSetOf<String>()
+
+        fun assign(target: AstNode, t: Taint?) = assign(target, t, null)
+
+        fun assign(target: AstNode, t: Taint?, value: AstNode?) {
+            if (target.kind == AstKind.VARIABLE) target.name?.let { name ->
+                if (value?.kind == AstKind.ARRAY_ACCESS && rootVariable(value) == "_FILES") filesAliases += name else filesAliases -= name
+            }
             // A new value replaces whatever a guard proved about the old one.
             guarded.removeAll { it == normalize(target.text) }
             when (target.kind) {
@@ -243,8 +251,11 @@ class TaintAnalyzer(
 
         fun evalUnguarded(n: AstNode): Taint? = when (n.kind) {
             AstKind.VARIABLE -> n.name?.let { name -> superglobal(name, null, keyed = false) ?: env[name] }
-            // clean_keys apply to $_FILES entries only ($_FILES['f']['tmp_name']), never to e.g. $_GET['name'].
-            AstKind.ARRAY_ACCESS -> if (rootVariable(n) == "_FILES" && n.child(AstRole.KEY)?.stringValue?.let { it in spec.cleanKeys } == true) null else {
+            // clean_keys apply to $_FILES entries only ($_FILES['f']['tmp_name'], or $f['tmp_name'] after
+            // $f = $_FILES['f']), never to e.g. $_GET['name'].
+            AstKind.ARRAY_ACCESS -> if (rootVariable(n).let { it == "_FILES" || it in filesAliases } &&
+                n.child(AstRole.KEY)?.stringValue?.let { it in spec.cleanKeys } == true
+            ) null else {
                 val receiver = n.child(AstRole.RECEIVER)
                 val global = receiver?.takeIf { it.kind == AstKind.VARIABLE }?.name?.takeIf(::isSuperglobal)
                 val element = elementKey(n)?.let { env[it] }

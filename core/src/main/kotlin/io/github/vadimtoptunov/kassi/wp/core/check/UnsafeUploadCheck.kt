@@ -22,12 +22,15 @@ class UnsafeUploadCheck(private val rule: Rule) : FileCheck {
     private val destArg = rule.params.strings("destination_argument").firstOrNull()?.toInt() ?: 1
     private val checks = CallTarget.parseAll(rule.sanitizers)
     private val adminChecks = CallTarget.parseAll(rule.params.strings("admin_checks"))
+    /** `params.filename_neutralisers`: helpers that defang dangerous names (CF7's wpcf7_antiscript_file_name). */
+    private val neutralisers = CallTarget.parseAll(rule.params.strings("filename_neutralisers"))
     private val scopes = TaintAnalyzer(TaintSpec(emptyList(), emptySet(), emptySet(), emptySet(), emptySet()))
 
     override fun checkFile(file: AstNode): List<Finding> = scopes.scopes(file).flatMap { scope ->
         val calls = HandlerFacts.callsIn(scope)
         if (calls.any { c -> checks.any { it.matches(c) } }) return@flatMap emptyList()
         val gated = calls.any { c -> adminChecks.any { it.matches(c) } }
+        val neutralised = calls.any { c -> neutralisers.any { it.matches(c) } }
         calls.filter { it.kind == AstKind.CALL && it.name?.lowercase() in sinks }
             .filterNot { fixedExtension(it.arguments.getOrNull(destArg)) }
             .map { call ->
@@ -35,8 +38,12 @@ class UnsafeUploadCheck(private val rule: Rule) : FileCheck {
                     rule.id, call,
                     "${call.name}() stores an uploaded file without checking its type " +
                         "(wp_check_filetype_and_ext, an extension allow-list, or wp_handle_upload)" +
-                        if (gated) ". Weak: the function checks a capability, so only privileged users reach it" else "",
-                    weak = gated,
+                        when {
+                            gated -> ". Weak: the function checks a capability, so only privileged users reach it"
+                            neutralised -> ". Weak: the file name goes through a neutralising helper; check that it blocks executable extensions"
+                            else -> ""
+                        },
+                    weak = gated || neutralised,
                 )
             }
     }
