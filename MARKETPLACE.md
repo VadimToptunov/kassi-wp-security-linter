@@ -14,7 +14,7 @@
   3. Use 1280×800 or larger, light theme, and no personal paths visible.
 
 ## First upload (manual, once)
-1. Build: `./gradlew buildPlugin` → `plugin/build/distributions/kassi-wp-security-linter-0.1.0.zip`
+1. Build: `./gradlew buildPlugin` → `plugin/build/distributions/kassi-wp-security-linter-1.0.0.zip`
    (or take the zip attached to the release PR).
 2. plugins.jetbrains.com/plugin/add → upload the zip. Category: Code tools / Inspections; tags as
    above; license: proprietary (free to use); source code URL: the GitHub repo; add the screenshots.

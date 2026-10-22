@@ -1,7 +1,7 @@
 name: Release
 
 # Publishes Kassi Security Inspections for WordPress to the JetBrains Marketplace on a version tag
-# (e.g. `v0.1.1`). The FIRST version is uploaded manually (plugins.jetbrains.com/plugin/add); every
+# (e.g. `v1.0.1`). The FIRST version is uploaded manually (plugins.jetbrains.com/plugin/add); every
 # later version is published by pushing a tag (or by the kassi-devtools rotating auto-publisher).
 # Free plugin (no product-descriptor): this just uploads a new version.
 #
@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Version to publish (without leading v, e.g. 0.1.1)
+        description: Version to publish (without leading v, e.g. 1.0.1)
         required: true
 
 permissions:

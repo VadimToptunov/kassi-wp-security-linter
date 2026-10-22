@@ -5,6 +5,6 @@ plugins {
 
 allprojects {
     group = providers.gradleProperty("pluginGroup").get()
-    // Overridable at release time: ./gradlew publishPlugin -PpluginVersion=0.1.0
+    // Overridable at release time: ./gradlew publishPlugin -PpluginVersion=1.0.1
     version = providers.gradleProperty("pluginVersion").get()
 }

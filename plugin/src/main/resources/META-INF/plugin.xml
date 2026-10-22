@@ -44,7 +44,7 @@
     ]]></description>
 
     <change-notes><![CDATA[
-    <p><b>0.1.0</b>: first release. Thirteen inspections (WP-001 to WP-013), project report (Markdown and JSON),
+    <p><b>1.0.0</b>: first release. Thirteen inspections (WP-001 to WP-013), project report (Markdown and JSON),
     path exclusions and an optional project rule pack.</p>
     ]]></change-notes>
 
