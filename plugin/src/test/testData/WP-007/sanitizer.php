@@ -17,3 +17,10 @@ function s_validate_file() {
 }
 function s_realpath() { $p = realpath(WP_CONTENT_DIR . '/' . $_GET['p']); readfile($p); }
 function s_tmp_name() { move_uploaded_file($_FILES['doc']['tmp_name'], wp_upload_dir()['basedir'] . '/s/x.pdf'); }
+
+// A $_FILES entry copied to a variable: its tmp_name is still the server-generated path.
+function s_files_alias() {
+    $file = $_FILES['image'];
+    $temp_name = $file['tmp_name'] ?? '';
+    $data = file_get_contents($temp_name);
+}

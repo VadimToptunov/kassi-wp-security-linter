@@ -15,3 +15,9 @@ function p_coalesce() {
     $to = $_GET['to'] ?? home_url();
     wp_redirect(<warning descr="wp_redirect() to a URL from request data ($_GET): open redirect. Use wp_safe_redirect()">$to</warning>, 302);
 }
+
+function p_nonce_gated() {
+    if (!wp_verify_nonce($_GET['_n'], 'p_connect')) { wp_die(); }
+    wp_redirect(<weak_warning descr="wp_redirect() to a URL from request data ($_GET): open redirect. Use wp_safe_redirect(). Weak: the function verifies a nonce, so a crafted link alone cannot trigger it">wp_unslash($_GET['install_url'])</weak_warning>);
+    exit;
+}
