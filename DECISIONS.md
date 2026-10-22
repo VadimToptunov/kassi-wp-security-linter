@@ -143,3 +143,17 @@ Closed before coding (2026-10-20).
   escaper here (CVE-2024-11199: it keeps quotes). Temporary shortcodes (registered and removed in one
   function) are skipped.
 - **Levels**: ERROR for WP-009, WP-011, WP-012 (critical); WARNING for WP-010, WP-013.
+
+## Validation decisions (2026-10-22)
+
+- Real-plugin validation has three parts (VALIDATION.md): recall on the full sources of all 31 corpus
+  CVEs, the top-20 false-positive run, and a pinned long-tail sample of 138 plugins. Triage was done
+  on a stratified sample of 102 findings by reading the code.
+- The rules were tightened from the long-tail triage. The criterion was that **no triaged real weakness
+  may be lost**. One step (counting any check in the registering function) did lose one, a high-severity
+  nopriv issue, and was narrowed to dominating checks, with a regression fixture added.
+- "Admin-only makes it weak" applies to sinks whose victim is the server or other users (SQL, files,
+  deserialization, SSRF, uploads, roles). It does not apply to reflected XSS or open redirect, where
+  the privileged user is the victim.
+- Unpatched vulnerabilities found during validation are never written to this public repository.
+  Disclosure is the maintainer's call.

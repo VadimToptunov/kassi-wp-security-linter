@@ -11,3 +11,13 @@ Still open:
 - `header('Location: …')` as a WP-008 sink, and `$wp_filesystem` methods as WP-007 sinks.
 - Output context awareness for WP-006 and WP-013 (attribute vs element vs URL vs JS).
 - `upload_mimes` filter widening (part of the original unsafe-uploads item).
+- From the long-tail triage (VALIDATION.md):
+  - reachability: handler classes that are never instantiated, and `add_action` callbacks with more
+    than one required parameter;
+  - extension and validator recognition: `$ext != 'zip'` with an exit, `strstr($f, '/')` rejection,
+    and `!empty($map[$f])` / `isset($map[$f])` membership;
+  - `$_FILES` entries copied to a variable (`$f = $_FILES['x']; $f['name']`);
+  - standalone scripts without ABSPATH that fatal before the sink, and constant-false branches
+    (`is_string($_POST)`);
+  - nonce actions that are also created on the front end (shortcodes, `wp_enqueue_scripts`), which
+    makes them no gate for WP-001/003.

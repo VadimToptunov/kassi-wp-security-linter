@@ -33,19 +33,20 @@ object Checks {
         "WP-013" to ::ShortcodeOutputCheck,
         "WP-001" to { rule ->
             HookHandlerCheck(rule) { h, hook, sink, weak ->
-                "Handler ${HookHandlerCheck.handlerLabel(h)} (hook $hook) calls $sink() without a capability check (current_user_can)" +
-                    if (weak) ". It verifies a nonce, so it is exploitable only if that nonce reaches lower-privileged users" else ""
+                "Handler ${HookHandlerCheck.Labels.handlerLabel(h)} (hook $hook) calls $sink() without a capability check (current_user_can)" +
+                    if (weak) ". Low impact: it only writes notice/onboarding-style state, or verifies a nonce that may never reach lower-privileged users" else ""
             }
         },
         "WP-002" to { rule ->
-            HookHandlerCheck(rule) { h, hook, sink, _ ->
-                "Handler ${HookHandlerCheck.handlerLabel(h)} (hook $hook) calls $sink() without nonce verification " +
-                    "(check_ajax_referer, check_admin_referer, wp_verify_nonce)"
+            HookHandlerCheck(rule) { h, hook, sink, weak ->
+                "Handler ${HookHandlerCheck.Labels.handlerLabel(h)} (hook $hook) calls $sink() without nonce verification " +
+                    "(check_ajax_referer, check_admin_referer, wp_verify_nonce)" + if (weak) ". Low impact: it only writes notice/onboarding-style state" else ""
             }
         },
         "WP-003" to { rule ->
-            HookHandlerCheck(rule) { h, hook, sink, _ ->
-                "Unauthenticated handler ${HookHandlerCheck.handlerLabel(h)} (hook $hook) calls $sink() with no capability check: anyone can trigger it"
+            HookHandlerCheck(rule) { h, hook, sink, weak ->
+                "Unauthenticated handler ${HookHandlerCheck.Labels.handlerLabel(h)} (hook $hook) calls $sink() with no capability check: anyone can trigger it" +
+                    if (weak) ". Low impact: it only writes notice/onboarding-style state" else ""
             }
         },
     )

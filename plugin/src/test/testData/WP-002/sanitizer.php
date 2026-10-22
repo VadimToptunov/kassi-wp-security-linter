@@ -24,3 +24,14 @@ function s_import() {
 function s_verify() {
     check_ajax_referer('s_import', 'nonce');
 }
+
+// The registering constructor verifies the nonce for every AJAX request before adding handlers.
+class S_Bootstrap {
+    public function __construct() {
+        if (wp_doing_ajax() && !wp_verify_nonce($_REQUEST['_nonce'] ?? '', 's_admin')) {
+            wp_send_json_error();
+        }
+        add_action('wp_ajax_s_bootstrap_save', array($this, 'save'));
+    }
+    public function save() { update_option('s_bootstrap', $_POST['v']); }
+}

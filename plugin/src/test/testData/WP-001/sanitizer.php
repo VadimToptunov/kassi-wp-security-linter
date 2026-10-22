@@ -55,3 +55,19 @@ function s_static() {
     }
     delete_option('s_settings');
 }
+
+// Registration-time guard: only users who can manage options ever get the hook.
+class S_Gated {
+    public function __construct() {
+        if (current_user_can('manage_options')) {
+            add_action('wp_ajax_s_gated', array($this, 'save'));
+        }
+    }
+    public function save() { update_option('s_gated', $_POST['v']); }
+}
+// Access helper defined in another file (name pattern).
+add_action('wp_ajax_s_helper', 's_helper');
+function s_helper() {
+    ecv2_settings_guard();
+    update_option('s_helper', $_POST['v']);
+}

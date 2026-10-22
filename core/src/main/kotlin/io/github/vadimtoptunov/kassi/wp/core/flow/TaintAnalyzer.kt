@@ -109,6 +109,13 @@ class TaintAnalyzer(
                     key?.let { assign(it, t) }
                     target?.let { assign(it, t) }
                     n.children.filter { it != iterated && it != key && it != target }.forEach(::visit)
+                    // foreach ($a as $k => $v) { $a[$k] = esc_attr($v); }: the loop cleans every element.
+                    val arr = iterated?.takeIf { it.kind == AstKind.VARIABLE }?.name
+                    val k = key?.takeIf { it.kind == AstKind.VARIABLE }?.name
+                    if (arr != null && k != null && cleansEveryElement(n, arr, k)) {
+                        env.remove(arr)
+                        env.keys.removeAll { it.startsWith(elementPrefix(arr)) }
+                    }
                 }
                 AstKind.IF -> visitIf(n)
                 else -> n.children.forEach(::visit)
@@ -208,6 +215,12 @@ class TaintAnalyzer(
             }
         }
 
+        fun cleansEveryElement(loop: AstNode, arr: String, key: String): Boolean = loop.walk().any { a ->
+            a.kind == AstKind.ASSIGNMENT && a.child(AstRole.TARGET)?.let { t ->
+                t.kind == AstKind.ARRAY_ACCESS && t.child(AstRole.RECEIVER)?.name == arr && t.child(AstRole.KEY)?.name == key
+            } == true && a.child(AstRole.VALUE)?.let { v -> v.kind == AstKind.CALL && v.name?.lowercase() in spec.sanitizerFunctions } == true
+        }
+
         fun elementPrefix(name: String) = "$name["
 
         /** `$a['k']` on a plain variable with a literal key → "a['k']"; otherwise null. */
@@ -230,7 +243,8 @@ class TaintAnalyzer(
 
         fun evalUnguarded(n: AstNode): Taint? = when (n.kind) {
             AstKind.VARIABLE -> n.name?.let { name -> superglobal(name, null, keyed = false) ?: env[name] }
-            AstKind.ARRAY_ACCESS -> if (n.child(AstRole.KEY)?.stringValue?.let { it in spec.cleanKeys } == true) null else {
+            // clean_keys apply to $_FILES entries only ($_FILES['f']['tmp_name']), never to e.g. $_GET['name'].
+            AstKind.ARRAY_ACCESS -> if (rootVariable(n) == "_FILES" && n.child(AstRole.KEY)?.stringValue?.let { it in spec.cleanKeys } == true) null else {
                 val receiver = n.child(AstRole.RECEIVER)
                 val global = receiver?.takeIf { it.kind == AstKind.VARIABLE }?.name?.takeIf(::isSuperglobal)
                 val element = elementKey(n)?.let { env[it] }
@@ -271,6 +285,11 @@ class TaintAnalyzer(
             val name = n.name?.lowercase() ?: return null
             return when {
                 name in spec.sanitizerFunctions -> null
+                // array_map('esc_attr', $atts): every element goes through a sanitizer.
+                name == "array_map" && n.arguments.firstOrNull()?.let { cb ->
+                    cb.kind == AstKind.STRING_LITERAL && cb.stringValue?.lowercase() in spec.sanitizerFunctions
+                } == true -> null
+                name == "array_map" -> n.arguments.drop(1).let { Taint.union(it.map(::eval)) }
                 spec.sources.any { it is SourceSpec.Function && it.name == name } -> Taint(setOf("$name()"))
                 name in spec.formatFunctions -> formatTaint(n)
                 name in spec.passthrough -> Taint.union(n.arguments.map(::eval))

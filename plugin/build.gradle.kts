@@ -114,9 +114,19 @@ tasks.test {
     inputs.dir(corpusDir).withPropertyName("corpus")
     systemProperty("kassi.corpus.dir", corpusDir.asFile.absolutePath)
     // Opt-in false-positive run over the popular-plugin corpus (corpus/fetch-popular.sh).
-    if (providers.gradleProperty("kassi.fprun").isPresent) {
-        systemProperty("kassi.fprun.dir", rootProject.layout.projectDirectory.dir("corpus/plugins").asFile.absolutePath)
+    // -Pkassi.fprun scans corpus/plugins; -Pkassi.fprun=<dir> scans another folder of plugin directories.
+    val fpRun = providers.gradleProperty("kassi.fprun")
+    if (fpRun.isPresent) {
+        val dir = fpRun.get().takeIf { it.isNotBlank() && it != "true" }?.let { file(it) }
+            ?: rootProject.layout.projectDirectory.dir("corpus/plugins").asFile
+        systemProperty("kassi.fprun.dir", dir.absolutePath)
         systemProperty("kassi.fprun.report", layout.buildDirectory.file("reports/fp-run.md").get().asFile.absolutePath)
+        outputs.upToDateWhen { false }
+    }
+    // Opt-in recall run on full CVE plugin sources (corpus/fetch-recall.sh).
+    if (providers.gradleProperty("kassi.recall").isPresent) {
+        systemProperty("kassi.recall.dir", rootProject.layout.projectDirectory.dir("corpus/recall").asFile.absolutePath)
+        systemProperty("kassi.recall.report", layout.buildDirectory.file("reports/recall-run.md").get().asFile.absolutePath)
         outputs.upToDateWhen { false }
     }
 }

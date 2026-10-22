@@ -56,7 +56,7 @@ sealed interface SourceSpec {
  *  - `params.guard_functions` allow-list/format checks on their first argument (`in_array($x, $allowed)`,
  *    `is_numeric($x)`): the argument is clean inside `if (guard)` and after `if (!guard) { return; }`
  *  - `params.terminators`      calls that end the request (`wp_die`, `wp_send_json_error`, ...)
- *  - `params.clean_keys`       array keys whose values are never attacker-controlled
+ *  - `params.clean_keys`       keys of `$_FILES` entries whose values are not attacker-controlled
  *                              (`$_FILES['f']['tmp_name']` is a server-generated path)
  *  - `params.host_prefix_cleans` `[true]` for URL rules: input after a fixed `scheme://host/` is clean
  */

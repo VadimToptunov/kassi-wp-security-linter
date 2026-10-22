@@ -21,3 +21,15 @@ function s_timeline($atts) {
     $out .= sprintf('Tweets by @%s', $atts['username']);
     return $out;
 }
+
+add_shortcode('s_loop', 's_loop');
+function s_loop($atts) {
+    foreach ($atts as $k => $v) {
+        $atts[$k] = esc_attr($v);
+    }
+    return '<div class="' . $atts['class'] . '"></div>';
+}
+add_shortcode('s_map', function ($atts) {
+    $a = array_map('esc_attr', $atts);
+    return '<span title="' . $a['t'] . '"></span>';
+});
