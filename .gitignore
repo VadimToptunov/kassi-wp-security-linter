@@ -51,3 +51,7 @@ hs_err_pid*.log
 corpus/plugins/
 corpus/recall/
 corpus/longtail/
+
+# Local working notes (not published)
+notes/
+CLAUDE.md

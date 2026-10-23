@@ -22,7 +22,7 @@ class UnsafeUploadCheck(private val rule: Rule) : FileCheck {
     private val destArg = rule.params.strings("destination_argument").firstOrNull()?.toInt() ?: 1
     private val checks = CallTarget.parseAll(rule.sanitizers)
     private val adminChecks = CallTarget.parseAll(rule.params.strings("admin_checks"))
-    /** `params.filename_neutralisers`: helpers that defang dangerous names (CF7's wpcf7_antiscript_file_name). */
+    /** `params.filename_neutralisers`: helpers that defang dangerous names (e.g. `*antiscript*`). */
     private val neutralisers = CallTarget.parseAll(rule.params.strings("filename_neutralisers"))
     private val scopes = TaintAnalyzer(TaintSpec(emptyList(), emptySet(), emptySet(), emptySet(), emptySet()))
 

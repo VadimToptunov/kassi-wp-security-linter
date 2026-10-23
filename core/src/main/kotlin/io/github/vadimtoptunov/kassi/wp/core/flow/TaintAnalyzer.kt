@@ -9,22 +9,15 @@ import io.github.vadimtoptunov.kassi.wp.core.ast.walk
 data class TaintedSink(val sink: AstNode, val argument: AstNode, val taint: Taint)
 
 /**
- * Lightweight intra-procedural taint: source → (sanitizer?) → sink within one scope (a function,
- * method, closure, or the file's top level), along assignments, `.=`, concatenation, interpolation,
- * array element reads/writes, `foreach`, `??`/ternaries and passthrough functions.
+ * Intra-procedural taint within one scope (function, method, closure or file top level).
  *
- * Deliberately simple and biased to silence:
- *  - statements are processed in source order with strong updates (`$x = intval($x)` cleans `$x`);
- *    branches and loops are not joined, so a conditional re-assignment can only hide a flow, never invent one;
- *  - anything not proven tainted is clean: parameters, properties, unknown function results,
- *    closure `use` variables, globals;
- *  - nested functions/closures are separate scopes and see nothing from the enclosing one;
- *  - allow-list guards clean their argument: inside `if (in_array($x, $allowed))`, and after
- *    `if (!in_array($x, $allowed)) { return; }` (guards and terminators come from the rule).
+ * - Statements run in source order with strong updates; `if/elseif/else` paths are joined (may-taint),
+ *   loops are not iterated.
+ * - Anything not proven tainted is clean: parameters, properties, unknown calls, `use` variables.
+ * - Nested functions are separate scopes.
+ * - Guards from the rule clean their argument inside `if (guard)` and on the fall-through of `if (!guard)`.
  *
- * @param callOverride rule-specific semantics for a call (return null to fall back to the defaults).
- *   It gets the call node and an evaluator for argument expressions. The return value is the
- *   call's taint wrapped in [Override], so "clean" and "no override" can be told apart.
+ * @param callOverride rule-specific call semantics; null falls back to the defaults.
  */
 class TaintAnalyzer(
     private val spec: TaintSpec,
@@ -35,10 +28,7 @@ class TaintAnalyzer(
     /** Every scope of [file]: the file's top level plus each function, method and closure. */
     fun scopes(file: AstNode): List<AstNode> = listOf(file) + file.walk().drop(1).filter { it.kind.isFunctionLike }.toList()
 
-    /**
-     * Analyses one [scope]. [sinkArguments] is asked for every node, in evaluation order, and returns
-     * the argument nodes of that node that are sinks (empty for non-sinks).
-     */
+    /** Analyses one [scope]; [sinkArguments] returns the sink arguments of a node (empty if none). */
     fun analyze(
         scope: AstNode,
         sinkArguments: (AstNode) -> List<AstNode>,
@@ -70,10 +60,7 @@ class TaintAnalyzer(
             return snapshot()
         }
 
-        /**
-         * May-taint join: a variable is tainted after the `if` when it is tainted, and not guarded, on
-         * at least one path that reaches past it. Guards survive only if every such path has them.
-         */
+        /** May-taint join over the paths that reach past the `if`; guards survive only if all paths have them. */
         fun join(paths: List<PathState>, fallback: PathState) {
             if (paths.isEmpty()) { restore(fallback); return }
             val joined = HashMap<String, Taint>()
@@ -126,10 +113,8 @@ class TaintAnalyzer(
         }
 
         /**
-         * `if / elseif / else` with per-path state. The then-branch sees the condition's positive guards;
-         * the implicit fall-through path (no `else`) sees its negative guards, so
-         * `if (!in_array($x, $ok)) { $x = 'default'; }` and `if (!in_array($x, $ok)) { return; }` both
-         * leave `$x` clean. Paths that end in return/exit/die/a terminator do not reach the join.
+         * Per-path `if`: the then-branch gets the positive guards, the implicit fall-through the negative
+         * ones; terminating paths are dropped before the join.
          */
         fun visitIf(n: AstNode) {
             val condition = n.child(AstRole.CONDITION)
@@ -251,8 +236,7 @@ class TaintAnalyzer(
 
         fun evalUnguarded(n: AstNode): Taint? = when (n.kind) {
             AstKind.VARIABLE -> n.name?.let { name -> superglobal(name, null, keyed = false) ?: env[name] }
-            // clean_keys apply to $_FILES entries only ($_FILES['f']['tmp_name'], or $f['tmp_name'] after
-            // $f = $_FILES['f']), never to e.g. $_GET['name'].
+            // clean_keys apply to $_FILES entries (and aliases of one) only.
             AstKind.ARRAY_ACCESS -> if (rootVariable(n).let { it == "_FILES" || it in filesAliases } &&
                 n.child(AstRole.KEY)?.stringValue?.let { it in spec.cleanKeys } == true
             ) null else {
@@ -308,11 +292,7 @@ class TaintAnalyzer(
             }
         }
 
-        /**
-         * URL rules (`params.host_prefix_cleans`): input appended after a fixed scheme and host cannot
-         * change where the request goes. Fixed means a literal `scheme://host/…` (or `?`/`#`), or a
-         * constant / class constant / clean value as the leftmost operand.
-         */
+        /** URL rules: input after a literal `scheme://host/`, a constant or a clean leftmost operand cannot change the host. */
         fun hostFixed(concat: AstNode): Boolean {
             var left: AstNode = concat
             while (left.kind == AstKind.CONCAT) left = left.child(AstRole.LEFT) ?: return false

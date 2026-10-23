@@ -31,8 +31,7 @@ class ShortcodeOutputCheck(private val rule: Rule) : FileCheck {
 
     override fun checkFile(file: AstNode): List<Finding> {
         val callables = Callables(file)
-        // A shortcode registered and removed again in the same function only evaluates internal strings
-        // (e.g. WooCommerce's [fee] in shipping costs); post content never reaches it.
+        // Registered and removed in the same function: evaluates internal strings, never post content.
         val temporary = HookRegistrations.of(file, unregistrars, callables).map { it.call.enclosingFunction() to it.hook }.toSet()
         return HookRegistrations.of(file, registrars, callables)
             .filterNot { (it.call.enclosingFunction() to it.hook) in temporary }
