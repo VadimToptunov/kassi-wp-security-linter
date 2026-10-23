@@ -70,4 +70,20 @@ class SettingsAndReportTest : BasePlatformTestCase() {
         assertTrue(report.markdown().contains("WP-005"))
         assertTrue(report.json().contains("\"cwe\": 89"))
     }
+
+    fun testReportScansTheDemoFileAndFindsEveryRule() {
+        val demo = java.io.File("../docs/demo/demo-plugin.php").readText()
+        myFixture.addFileToProject("demo/demo-plugin.php", demo)
+        val report = GenerateReportAction.buildReport(project, null)
+        assertEquals(1, report.filesScanned)
+        val rulesFound = report.entries.map { it.rule.id }.toSet()
+        assertEquals(io.github.vadimtoptunov.kassi.wp.plugin.inspections.Inspections.byRuleId.keys, rulesFound)
+        assertEquals(13, report.rulesChecked.size)
+    }
+
+    fun testEmptyProjectStillListsTheRulesThatWouldBeChecked() {
+        val report = GenerateReportAction.buildReport(project, null)
+        assertEquals(0, report.filesScanned)
+        assertEquals(13, report.rulesChecked.size)
+    }
 }
