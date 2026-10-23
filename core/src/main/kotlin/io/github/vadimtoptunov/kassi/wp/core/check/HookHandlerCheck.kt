@@ -64,20 +64,14 @@ class HookHandlerCheck(
             if (endpointPrefixes.isNotEmpty() && regs.any { r -> endpointPrefixes.none { r.hook.startsWith(it) } }) {
                 return@mapNotNull null
             }
-            // add_action(...) inside `if (current_user_can(...))` (or any check from `sanitizers:`):
-            // the handler is only registered for users who passed the check.
             if (regs.all { r -> registeredUnderCheck(r.call) }) return@mapNotNull null
             check(handler, hit, callables)
         }
     }
 
     /**
-     * The registration itself is gated by a check that dominates it:
-     *  - `add_action` sits inside `if (<check>)`, or
-     *  - earlier in the registering function an `if (!<check> ...) { return / exit / die / wp_die /
-     *    wp_send_json_error }` stops the request (TotalPoll's constructor verifies the nonce of every
-     *    AJAX request this way).
-     * A check in some unrelated branch of the same function does not count.
+     * The registration is gated by a dominating check: `add_action` inside `if (<check>)`, or an earlier
+     * `if (!<check>) { return/die/... }` in the registering function. Checks in unrelated branches don't count.
      */
     private fun registeredUnderCheck(call: AstNode): Boolean {
         val underIf = call.ancestors().takeWhile { !it.kind.isFunctionLike || it.kind == AstKind.CLOSURE }

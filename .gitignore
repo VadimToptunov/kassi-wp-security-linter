@@ -51,3 +51,11 @@ hs_err_pid*.log
 corpus/plugins/
 corpus/recall/
 corpus/longtail/
+
+# Local working notes (not published)
+notes/
+CLAUDE.md
+
+# Files a local runIde session creates next to the demo
+docs/demo/.idea/
+docs/demo/kassi-wp-security-report.*

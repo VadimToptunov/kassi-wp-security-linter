@@ -7,7 +7,7 @@ import java.io.File
 /**
  * Not a regular test: a review aid. Runs every inspection over the popular-plugin corpus
  * (corpus/fetch-popular.sh) and writes every finding to build/reports/fp-run.md for manual triage
- * into FALSE_POSITIVES.md. Skipped unless Gradle is run with -Pkassi.fprun.
+ * for manual triage. Skipped unless Gradle is run with -Pkassi.fprun.
  */
 class FalsePositiveRun : BasePlatformTestCase() {
 

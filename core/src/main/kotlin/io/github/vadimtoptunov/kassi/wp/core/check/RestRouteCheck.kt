@@ -10,18 +10,13 @@ import io.github.vadimtoptunov.kassi.wp.core.hooks.HandlerFacts
 import io.github.vadimtoptunov.kassi.wp.core.model.Rule
 
 /**
- * WP-004: a REST route reachable by anyone.
+ * WP-004: a REST route without a real `permission_callback`.
  *
- * Fires on a `register_rest_route()` call (any name in the rule's `source`) when an endpoint
- *  - has no `permission_callback` (or `null`): a warning on write routes, weak on read-only ones; or
- *  - uses an always-true callback (`params.open_permission_callbacks`, or a closure whose whole body
- *    is `return true` / `=> true`) while its methods are not all read-only: weak, because
- *    intentionally public write routes are declared the same way.
+ * Missing callback: warning on write routes, weak on read-only ones. Always-true callback on a write
+ * route: weak, or a warning when the same-file handler itself calls a privileged sink. Silent when the
+ * endpoint shape is not statically known.
  *
- * Silent whenever the shape is not proven: non-literal endpoint arrays, dynamic or unkeyed entries
- * (e.g. a spread), unresolvable `methods`, or a callback that is any other function/callable.
- *
- * Rule params (all from YAML):
+ * Rule params:
  *  - `read_only_methods`        HTTP methods that cannot change state, e.g. `[GET, HEAD]`
  *  - `default_methods`          methods WordPress assumes when `methods` is omitted
  *  - `method_constants`         `Class::CONST` → comma-separated methods
@@ -102,8 +97,7 @@ class RestRouteCheck(private val rule: Rule) {
         }
 
         if (methods == null || readOnlyRoute || !isAlwaysTrue(callback)) return null
-        // Escalate when the route handler is in this file and provably does something privileged
-        // (params.privileged_sinks) without a capability check of its own.
+        // Escalate when the same-file handler calls a privileged sink without a capability check.
         privilegedSinkOf(entries["callback"], reportOn)?.let { sink ->
             return Finding(
                 rule.id, callback,
@@ -111,9 +105,7 @@ class RestRouteCheck(private val rule: Rule) {
                     "whose handler calls $sink() without a capability check: anyone can call it",
             )
         }
-        // Otherwise weak: an always-true callback is also how intentionally public write routes are
-        // declared (form submissions, signed handshakes that authenticate inside the handler), and the
-        // handler is not resolvable here (see DECISIONS.md, FALSE_POSITIVES.md).
+        // Otherwise weak: intentionally public write routes are declared the same way.
         return Finding(
             rule.id, callback,
             "permission_callback always allows access on a state-changing REST route${methodsLabel(methods)}. " +
@@ -129,8 +121,7 @@ class RestRouteCheck(private val rule: Rule) {
         val handler = callables.resolve(handlerRef, site) ?: return null
         val facts = HandlerFacts(handler, callables)
         if (facts.anyMatch(capabilityChecks)) return null
-        // Only sinks in the handler's own body escalate. Public routes that authenticate with a request
-        // secret (Jetpack connection, WooCommerce QR login) reach their writes through helpers.
+        // Only sinks in the handler's own body escalate (secret-authenticated routes write via helpers).
         val sink = facts.ownCalls.firstOrNull { c -> privilegedSinks.any { it.matches(c) } } ?: return null
         return privilegedSinks.first { it.matches(sink) }.label
     }
