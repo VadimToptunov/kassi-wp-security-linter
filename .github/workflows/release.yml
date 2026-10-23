@@ -31,8 +31,7 @@ jobs:
         with:
           submodules: recursive
 
-      # The Plugin Verifier downloads full PhpStorm distributions; without this the runner can run out
-      # of disk mid-download and die with no log (bit SWIFT 1.1.0).
+      # The Plugin Verifier downloads full IDE distributions; free runner disk first.
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL

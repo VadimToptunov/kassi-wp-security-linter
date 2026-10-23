@@ -13,11 +13,10 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.psi.PsiManager
-import com.intellij.psi.search.FileTypeIndex
-import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.profile.codeInspection.InspectionProjectProfileManager
-import com.jetbrains.php.lang.PhpFileType
 import com.jetbrains.php.lang.psi.PhpFile
 import io.github.vadimtoptunov.kassi.wp.core.report.Report
 import io.github.vadimtoptunov.kassi.wp.core.report.ReportEntry
@@ -45,6 +44,17 @@ class GenerateReportAction : AnAction() {
         object : Task.Backgroundable(project, "Kassi WP security report", true) {
             override fun run(indicator: ProgressIndicator) {
                 val report = buildReport(project, indicator)
+                if (report.filesScanned == 0) {
+                    ApplicationManager.getApplication().invokeLater {
+                        ProjectRuleBase.notifyInfo(
+                            project,
+                            "No PHP files to scan: open a folder with your plugin or theme as the project " +
+                                "(File | Open…), and check the excluded paths in Settings | Tools | Kassi WordPress Security.",
+                            NotificationType.WARNING,
+                        )
+                    }
+                    return
+                }
                 val base = File(project.basePath ?: return)
                 val md = File(base, "$FILE_NAME.md").apply { writeText(report.markdown()) }
                 File(base, "$FILE_NAME.json").writeText(report.json())
@@ -65,15 +75,37 @@ class GenerateReportAction : AnAction() {
     companion object {
         const val FILE_NAME = "kassi-wp-security-report"
 
+        /**
+         * PHP files to scan: everything under the project's content roots (walked directly, so it works
+         * while indexing is still running), plus PHP files open in the editor that live outside the
+         * project (a single file opened with File | Open).
+         */
+        fun phpFiles(project: Project): List<VirtualFile> = ApplicationManager.getApplication().runReadAction(
+            Computable {
+                val found = linkedSetOf<VirtualFile>()
+                ProjectRootManager.getInstance(project).fileIndex.iterateContent { vf ->
+                    if (!vf.isDirectory && vf.extension.equals("php", ignoreCase = true)) found += vf
+                    true
+                }
+                FileEditorManager.getInstance(project).openFiles
+                    .filter { !it.isDirectory && it.extension.equals("php", ignoreCase = true) }
+                    .forEach { found += it }
+                found.sortedBy { it.path }
+            },
+        )
+
         fun buildReport(project: Project, indicator: ProgressIndicator?): Report {
             val rules = ProjectRuleBase.getInstance(project)
             val app = ApplicationManager.getApplication()
-            val files = app.runReadAction(
-                Computable { FileTypeIndex.getFiles(PhpFileType.INSTANCE, GlobalSearchScope.projectScope(project)).toList() },
-            ).sortedBy { it.path }
+            val files = phpFiles(project)
             val profile = InspectionProjectProfileManager.getInstance(project).currentProfile
+            // Rules that are enabled in the inspection profile and implemented: listed even when no file
+            // was scanned, so an empty report still says what would have been checked.
+            val enabled = Inspections.byRuleId.filter { (ruleId, tool) ->
+                val key = HighlightDisplayKey.find(tool.shortName)
+                (key == null || profile.isToolEnabled(key)) && rules.rule(ruleId) != null && rules.check(ruleId) != null
+            }
             val entries = mutableListOf<ReportEntry>()
-            val checked = linkedSetOf<String>()
             var scanned = 0
             files.forEachIndexed { i, vf ->
                 indicator?.checkCanceled()
@@ -83,23 +115,21 @@ class GenerateReportAction : AnAction() {
                     if (RuleInspection.isExcluded(psi)) return@runReadAction
                     scanned++
                     val path = RuleInspection.relativePath(project, psi) ?: vf.path
-                    val text = psi.viewProvider.contents
-                    for ((ruleId, tool) in Inspections.byRuleId) {
+                    val lines = StringUtil.splitByLines(psi.viewProvider.contents.toString(), false)
+                    for ((ruleId, tool) in enabled) {
                         val key = HighlightDisplayKey.find(tool.shortName)
                         if (key != null && !profile.isToolEnabled(key, psi)) continue
                         val rule = rules.rule(ruleId) ?: continue
                         val check = rules.check(ruleId) ?: continue
-                        checked += ruleId
                         for (f in check.checkFile(PhpPsiAstNode.wrap(psi))) {
                             val line = f.node.location.line
-                            val lineText = StringUtil.splitByLines(text.toString(), false).getOrNull(line - 1).orEmpty().trim()
-                            entries += ReportEntry(rule, path, line, lineText.take(160), f.message, f.weak)
+                            entries += ReportEntry(rule, path, line, lines.getOrNull(line - 1).orEmpty().trim().take(160), f.message, f.weak)
                         }
                     }
                 }
             }
             val version = GenerateReportAction::class.java.classLoader.getResource("kassi/plugin-version.txt")?.readText()?.trim() ?: "dev"
-            val ruleList = checked.sorted().mapNotNull { rules.rule(it) }
+            val ruleList = enabled.keys.sorted().mapNotNull { rules.rule(it) }
             return Report(version, ruleList, entries, scanned)
         }
     }
