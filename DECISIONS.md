@@ -157,3 +157,11 @@ Closed before coding (2026-10-20).
   the privileged user is the victim.
 - Unpatched vulnerabilities found during validation are never written to this public repository.
   Disclosure is the maintainer's call.
+
+## Release decision (2026-10-22)
+
+- **The first public version is 1.0.0, not 0.1.0** (user decision). The engine was validated on 31 real
+  CVEs, the top-20 plugins and a 138-plugin long tail before release, so 1.0 is the honest maturity
+  level. It also fits the Kassi product-descriptor numbering (release-version = major+minor) should
+  the plugin later become Freemium. Internal docs still call the first rule set "v0.1"; that is the
+  spec's name for WP-001..WP-013, not a version number.

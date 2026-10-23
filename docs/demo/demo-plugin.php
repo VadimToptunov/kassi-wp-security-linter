@@ -50,3 +50,34 @@ function demo_back() {
 	wp_redirect( $_GET['redirect_to'] );
 	exit;
 }
+
+// WP-009: PHP object injection.
+function demo_import_settings() {
+	$settings = maybe_unserialize( base64_decode( $_POST['settings'] ) );
+	update_option( 'demo_settings', $settings );
+}
+
+// WP-010: server-side request forgery.
+function demo_fetch_preview() {
+	$response = wp_remote_get( esc_url_raw( $_POST['preview_url'] ) );
+	return wp_remote_retrieve_body( $response );
+}
+
+// WP-011: upload stored without a type check.
+function demo_upload_logo() {
+	$target = wp_upload_dir()['basedir'] . '/demo/' . $_FILES['logo']['name'];
+	move_uploaded_file( $_FILES['logo']['tmp_name'], $target );
+}
+
+// WP-012: role taken from the request.
+function demo_register_member( $user_id ) {
+	$user = new WP_User( $user_id );
+	$user->set_role( sanitize_text_field( $_POST['role'] ) );
+}
+
+// WP-013: shortcode attribute output without escaping.
+add_shortcode( 'demo_badge', 'demo_badge_shortcode' );
+function demo_badge_shortcode( $atts ) {
+	$a = shortcode_atts( array( 'color' => 'blue', 'label' => '' ), $atts );
+	return '<span class="badge badge-' . $a['color'] . '">' . $a['label'] . '</span>';
+}
