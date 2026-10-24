@@ -4,9 +4,12 @@
     <vendor email="vtoptunov88@gmail.com" url="https://github.com/VadimToptunov">Vadim Toptunov</vendor>
 
     <description><![CDATA[
-    <p>Static security inspections for WordPress plugin and theme code, right in PhpStorm. Each rule maps to
-    a CWE and is backed by real, fixed CVEs from the WordPress plugin ecosystem. For every rule, the vulnerable
-    code is flagged and the fixed code stays silent.</p>
+    <p>Find security vulnerabilities in WordPress plugin and theme code as you type in PhpStorm:
+    SQL injection, cross-site scripting (XSS), CSRF and missing nonce checks, missing capability checks,
+    unprotected REST routes, server-side request forgery (SSRF), PHP object injection, path traversal and
+    unsafe file uploads. Thirteen static inspections, each mapped to a CWE and backed by real, fixed CVEs
+    from the WordPress plugin ecosystem. For every rule, the vulnerable code is flagged and the fixed code
+    stays silent.</p>
     <h3>Inspections</h3>
     <ul>
       <li><b>WP-001</b> AJAX / admin-post handler changes state without a capability check (CWE-862)</li>
