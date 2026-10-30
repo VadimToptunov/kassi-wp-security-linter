@@ -51,6 +51,7 @@ hs_err_pid*.log
 corpus/plugins/
 corpus/recall/
 corpus/longtail/
+corpus/hunt/
 
 # Local working notes (not published)
 notes/

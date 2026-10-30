@@ -49,51 +49,74 @@ def main() -> int:
               f"(see corpus/hunt.sh)", file=sys.stderr)
         return 1
 
-    findings = []  # (rule, plugin, location, message, line, tier)
+    # A finding the linter marked weak (". Weak: …" suffix) is reachable only by a privileged
+    # victim, nonce-protected, or validated against an allow-list — not an exploit on its own. It is
+    # kept but pushed below every real candidate and never counted toward a cluster, so a pile of
+    # cap-gated/allow-listed handlers can't masquerade as a pepro-class find.
+    WEAK = re.compile(r"\bWeak:", re.IGNORECASE)
+
+    findings = []  # (rule, plugin, location, message, line, tier, weak)
     for ln in open(path, encoding="utf-8"):
         m = ROW.match(ln.rstrip("\n"))
         if not m:
             continue
         rule, plugin, loc, msg, line = m.groups()
-        findings.append((rule, plugin.strip(), loc, msg, line, TIER.get(rule, "?")))
+        weak = bool(WEAK.search(msg))
+        findings.append((rule, plugin.strip(), loc, msg, line, TIER.get(rule, "?"), weak))
 
     if not findings:
         print("no findings parsed (empty run, or format changed).")
         return 0
 
-    # Cluster bonus: how many A/B findings each plugin has.
-    hi_by_plugin = collections.Counter(
-        f[1] for f in findings if f[5] in ("A", "B"))
+    strong = [f for f in findings if not f[6]]
+    weak = [f for f in findings if f[6]]
+
+    # Cluster bonus counts STRONG findings only, split by tier so an injection/privesc cluster
+    # (real A-tier, pepro-class) is told apart from a pile of CSRF/authz handlers (B only).
+    a_by_plugin = collections.Counter(f[1] for f in strong if f[5] == "A")
+    hi_by_plugin = collections.Counter(f[1] for f in strong if f[5] in ("A", "B"))
 
     def sort_key(f):
-        rule, plugin, loc, msg, line, tier = f
+        rule, plugin, loc, _msg, _line, tier, _weak = f
         return (TIER_RANK[tier], -hi_by_plugin[plugin], plugin, rule, loc)
 
-    findings.sort(key=sort_key)
+    strong.sort(key=sort_key)
+    weak.sort(key=sort_key)
 
     # Summary
-    by_tier = collections.Counter(f[5] for f in findings)
+    by_tier = collections.Counter(f[5] for f in strong)
     print("# Hunt triage — ranked by Patchstack payability\n")
-    print(f"total findings: {len(findings)}  "
+    print(f"strong findings: {len(strong)}  "
           f"(A:{by_tier['A']} B:{by_tier['B']} C:{by_tier['C']} "
-          f"D:{by_tier['D']} ?:{by_tier['?']})\n")
+          f"D:{by_tier['D']} ?:{by_tier['?']})   weak/likely-FP: {len(weak)}\n")
 
     clusters = [(p, n) for p, n in hi_by_plugin.most_common() if n >= 2]
     if clusters:
-        print("## Systemic clusters (>=2 high-tier findings — look here first, pepro-class)\n")
+        print("## Systemic clusters (>=2 strong high-tier findings — look here first)\n")
         for plugin, n in clusters:
-            print(f"- **{plugin}** — {n} high-tier findings")
+            a = a_by_plugin[plugin]
+            kind = f"{a} A-tier (injection/privesc — pepro-class)" if a else "B-tier only (access-control pile — usually low cash)"
+            print(f"- **{plugin}** — {n} high-tier findings · {kind}")
         print()
 
-    print("## Ranked candidates\n")
+    print("## Ranked candidates (strong)\n")
     print("| # | Tier | Rule | Plugin | Location | Message |")
     print("| --- | --- | --- | --- | --- | --- |")
-    for i, (rule, plugin, loc, msg, line, tier) in enumerate(findings, 1):
+    for i, (rule, plugin, loc, msg, line, tier, _) in enumerate(strong, 1):
         star = " ⭐" if hi_by_plugin[plugin] >= 2 and tier in ("A", "B") else ""
         print(f"| {i} | {tier}{star} | {rule} | {plugin} | `{loc}` | {msg[:80]} |")
         if i >= 120:
-            print(f"| … | | | | | ({len(findings) - 120} more) |")
+            print(f"| … | | | | | ({len(strong) - 120} more) |")
             break
+
+    if weak:
+        print("\n## Weak / likely-FP (capability-gated, nonce-protected, or allow-listed — skip unless chaining)\n")
+        print("| Tier | Rule | Plugin | Location | Message |")
+        print("| --- | --- | --- | --- | --- |")
+        for rule, plugin, loc, msg, line, tier, _ in weak[:60]:
+            print(f"| {tier} | {rule} | {plugin} | `{loc}` | {msg[:90]} |")
+        if len(weak) > 60:
+            print(f"| | | | | ({len(weak) - 60} more) |")
 
     print("\n## Tier legend")
     for t in ("A", "B", "C", "D", "?"):

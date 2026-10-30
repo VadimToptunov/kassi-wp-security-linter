@@ -154,15 +154,16 @@ class PhpPsiAstNode private constructor(val psi: PsiElement) : AstNode {
      */
     override fun resolveCall(call: AstNode): AstNode? {
         val ref = (call as? PhpPsiAstNode)?.psi as? FunctionReference ?: return null
-        // PHP PSI type inference (needed to resolve a method receiver) can throw on pathological
-        // code — RecursionManager caching/stack-overflow preventions. Treat any such failure as
-        // "unresolved" so analysis falls back to same-file behaviour instead of crashing. Never
-        // swallow ProcessCanceledException (IntelliJ cancellation contract).
+        // Resolution is best-effort: PHP PSI type inference and stub building can fail on
+        // pathological vendored code (RecursionManager caching/stack-overflow preventions, a
+        // stub-tree build failure — the latter surfaces as an AssertionError under the test logger,
+        // not an Exception). Treat ANY such failure as "unresolved" so analysis falls back to
+        // same-file behaviour instead of crashing. Cancellation is never swallowed.
         val target = try {
             ref.resolve() as? Function ?: return null
         } catch (e: ProcessCanceledException) {
             throw e
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             return null
         }
         if (target is Method && target.isAbstract) return null

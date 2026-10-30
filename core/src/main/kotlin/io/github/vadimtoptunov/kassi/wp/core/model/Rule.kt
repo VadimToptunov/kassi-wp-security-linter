@@ -42,6 +42,9 @@ data class PluginOverlay(
 class RuleParams(private val raw: Map<String, Any?>) {
     fun strings(key: String): List<String> = (raw[key] as? List<*>)?.map { it.toString() } ?: emptyList()
 
+    /** A boolean knob; missing or non-`true` yields false. */
+    fun bool(key: String): Boolean = raw[key] == true || raw[key]?.toString()?.equals("true", ignoreCase = true) == true
+
     fun stringMap(key: String): Map<String, String> =
         (raw[key] as? Map<*, *>)?.entries?.associate { (k, v) -> k.toString() to v.toString() } ?: emptyMap()
 
