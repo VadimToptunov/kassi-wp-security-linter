@@ -35,7 +35,7 @@ LIST="hunt-batch.txt" OUT="hunt" "$CORPUS/fetch-popular.sh"
 
 echo
 echo "== 3/4 running inspections headless over $HUNTDIR =="
-./gradlew --quiet :plugin:test -Pkassi.fprun="$PWD/$HUNTDIR" --tests '*FalsePositiveRun*' || {
+./gradlew --quiet --no-watch-fs :plugin:test -Pkassi.fprun="$PWD/$HUNTDIR" --tests '*FalsePositiveRun*' || {
   echo "gradle run failed — see output above" >&2; exit 1; }
 
 echo

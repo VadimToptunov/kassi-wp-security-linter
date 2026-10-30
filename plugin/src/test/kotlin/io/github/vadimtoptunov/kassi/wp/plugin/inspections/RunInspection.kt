@@ -5,12 +5,35 @@ import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.PsiRecursiveElementWalkingVisitor
 import com.jetbrains.php.lang.PhpFileType
 
 /** A finding from a headless run: 1-based line, the trimmed line text, and the message. */
 data class RunFinding(val line: Int, val lineText: String, val message: String)
+
+/**
+ * Runs one inspection's visitor over an already-in-project [PsiFile]. Unlike [runInspection], the
+ * file is part of the indexed fixture project, so cross-file resolution (PhpIndex: a gate helper in
+ * another file) works. Use this when the whole plugin has been added to the project.
+ */
+fun runInspectionOn(project: Project, tool: LocalInspectionTool, file: PsiFile): List<RunFinding> {
+    val holder = ProblemsHolder(InspectionManager.getInstance(project), file, false)
+    val visitor = tool.buildVisitor(holder, false)
+    file.accept(object : PsiRecursiveElementWalkingVisitor() {
+        override fun visitElement(element: PsiElement) {
+            element.accept(visitor)
+            super.visitElement(element)
+        }
+    })
+    val text = file.text
+    val lines = text.lines()
+    return holder.results.map { p ->
+        val line = text.substring(0, p.psiElement.textRange.startOffset).count { it == '\n' } + 1
+        RunFinding(line, lines[line - 1].trim(), p.descriptionTemplate)
+    }
+}
 
 /**
  * Runs one inspection's own visitor over PHP text parsed without indexing (real-world files can trip
