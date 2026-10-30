@@ -2,6 +2,7 @@ package io.github.vadimtoptunov.kassi.wp.plugin.psi
 
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.psi.PsiComment
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiWhiteSpace
@@ -143,6 +144,31 @@ class PhpPsiAstNode private constructor(val psi: PsiElement) : AstNode {
 
     override val stringValue: String?
         get() = (psi as? StringLiteralExpression)?.contents
+
+    /**
+     * Cross-file resolution via PHP PSI: resolve the call's reference to its [Function] / [Method]
+     * declaration anywhere in the project and wrap it, so a gate helper defined in another file
+     * (e.g. `Helpers::verify_ajax_call()`) is followed into. Returns null for a dynamic call, an
+     * abstract/interface-only declaration (no body to analyse), or an unresolved target — in which
+     * case callers keep their same-file behaviour.
+     */
+    override fun resolveCall(call: AstNode): AstNode? {
+        val ref = (call as? PhpPsiAstNode)?.psi as? FunctionReference ?: return null
+        // PHP PSI type inference (needed to resolve a method receiver) can throw on pathological
+        // code — RecursionManager caching/stack-overflow preventions. Treat any such failure as
+        // "unresolved" so analysis falls back to same-file behaviour instead of crashing. Never
+        // swallow ProcessCanceledException (IntelliJ cancellation contract).
+        val target = try {
+            ref.resolve() as? Function ?: return null
+        } catch (e: ProcessCanceledException) {
+            throw e
+        } catch (e: Exception) {
+            return null
+        }
+        if (target is Method && target.isAbstract) return null
+        if (target.navigationElement.containingFile == null) return null
+        return wrap(target)
+    }
 
     override fun equals(other: Any?): Boolean = other is PhpPsiAstNode && other.psi == psi
     override fun hashCode(): Int = psi.hashCode()

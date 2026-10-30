@@ -35,6 +35,19 @@ interface AstNode {
      * removed (interpolated parts are left as source text). Null for every other kind.
      */
     val stringValue: String?
+
+    /**
+     * Resolve a call node ([AstKind.CALL] / [METHOD_CALL] / [STATIC_CALL]) to the function or method
+     * it targets, following references **across files** — the one thing same-file [AstNode] walking
+     * cannot do. Returns the definition node (a [FUNCTION] or [METHOD]), or null when the target is
+     * dynamic, abstract/interface-only, unresolved, or when the adapter has no project-wide index.
+     *
+     * Default: null. Same-file-only adapters and hand-built test trees leave it so and let
+     * callers fall back to same-file resolution. Adapters over a parser with cross-file resolution
+     * (IntelliJ PHP PSI) override it so a gate helper like `Helpers::verify_ajax_call()` defined in
+     * another file is followed into, and its `check_ajax_referer` / `current_user_can` are seen.
+     */
+    fun resolveCall(call: AstNode): AstNode? = null
 }
 
 enum class AstKind {

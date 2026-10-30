@@ -7,8 +7,10 @@ import io.github.vadimtoptunov.kassi.wp.core.ast.ancestors
 import io.github.vadimtoptunov.kassi.wp.core.ast.walk
 
 /**
- * Same-file resolution of PHP callables, the only kind v0.1 follows. Returns the function, method or
- * closure node, or null when the target is in another file, dynamic, or ambiguous.
+ * Resolution of PHP callables. Prefers same-file definitions (function, method of the enclosing
+ * class via `$this`/`self`/`static`, closure); when the target is in another file it falls back to
+ * the adapter's cross-file resolution ([AstNode.resolveCall], a no-op for same-file-only adapters).
+ * Returns the callable node, or null when the target is dynamic, ambiguous, or unresolved.
  */
 class Callables(private val file: AstNode) {
     private val functions: Map<String, List<AstNode>> by lazy {
@@ -38,19 +40,24 @@ class Callables(private val file: AstNode) {
         else -> null
     }
 
-    /** A call inside [scope] to a same-file function, or to a method of the enclosing class via `$this`/`self`/`static`. */
+    /**
+     * A call to a same-file function, or to a method of the enclosing class via `$this`/`self`/
+     * `static`. When same-file resolution yields nothing (the target lives in another file — e.g. a
+     * `Helpers::verify_ajax_call()` gate), falls back to the adapter's cross-file resolution.
+     */
     fun resolveCall(call: AstNode): AstNode? {
         val name = call.name ?: return null
-        return when (call.kind) {
+        val sameFile = when (call.kind) {
             AstKind.CALL -> function(name)
             AstKind.METHOD_CALL, AstKind.STATIC_CALL -> {
-                val recv = call.child(AstRole.RECEIVER) ?: return null
-                val own = (recv.kind == AstKind.VARIABLE && recv.name == "this") ||
-                    (recv.kind == AstKind.CLASS_REFERENCE && recv.name?.lowercase() in SELF_NAMES)
+                val recv = call.child(AstRole.RECEIVER)
+                val own = recv != null && ((recv.kind == AstKind.VARIABLE && recv.name == "this") ||
+                    (recv.kind == AstKind.CLASS_REFERENCE && recv.name?.lowercase() in SELF_NAMES))
                 if (own) method(enclosingClass(call), name) else null
             }
             else -> null
         }
+        return sameFile ?: file.resolveCall(call)
     }
 
     private fun function(name: String): AstNode? = functions[name.trimStart('\\').lowercase()]?.singleOrNull()
