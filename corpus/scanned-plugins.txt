@@ -1,0 +1,21 @@
+# slugs already scanned by hunt.sh — excluded from future selections
+all-in-one-wp-security-and-firewall@5.5.1
+blockspare@5.2.0
+change-wp-admin-login@2.5.1
+data-tables-generator-by-supsystic@1.15.7
+drag-and-drop-multiple-file-upload-contact-form-7@1.4.1
+event-organiser@3.12.12
+google-maps-easy@1.16.1
+hcaptcha-for-forms-and-more@5.5.0
+headers-security-advanced-hsts-wp@5.3.6
+import-users-from-csv-with-meta@2.5.12
+inspiro-starter-sites@1.4.0
+jeg-elementor-kit@3.3.0
+members@3.3.1
+nav-menu-roles@3.0.0
+optima-express@9.0.1
+pricing-table-by-supsystic@1.12.4
+simpletoc@7.4.1
+superb-blocks@4.2.5
+ultimate-maps-by-supsystic@1.6.5
+woo-product-filter@3.4.8

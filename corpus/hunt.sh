@@ -14,7 +14,7 @@ cd "$(dirname "$0")/.."            # repo root
 CORPUS=corpus
 BATCH="$CORPUS/hunt-batch.txt"
 HUNTDIR="$CORPUS/hunt"
-REPORT="build/reports/fp-run.md"
+REPORT="plugin/build/reports/fp-run.md"
 
 BROWSE="${BROWSE:-updated}"
 COUNT="${COUNT:-40}"
@@ -40,7 +40,17 @@ echo "== 3/4 running inspections headless over $HUNTDIR =="
 
 echo
 echo "== 4/4 triage (ranked by Patchstack payability) =="
-python3 "$CORPUS/hunt-triage.py" "$REPORT" | tee "build/reports/hunt-triage.md"
+python3 "$CORPUS/hunt-triage.py" "$REPORT" | tee "plugin/build/reports/hunt-triage.md"
+
+# Record the scanned slugs so hunt-select.py excludes them next time (it reads
+# every *-plugins.txt). Accumulates across runs.
+LEDGER="$CORPUS/scanned-plugins.txt"
+[[ -f "$LEDGER" ]] || echo "# slugs already scanned by hunt.sh — excluded from future selections" > "$LEDGER"
+grep -v '^#' "$BATCH" | awk '{print $1}' >> "$LEDGER"
+# de-dup, keep header
+{ head -1 "$LEDGER"; grep -v '^#' "$LEDGER" | sort -u; } > "$LEDGER.tmp" && mv "$LEDGER.tmp" "$LEDGER"
+
 echo
-echo "candidates written to build/reports/hunt-triage.md"
+echo "candidates written to plugin/build/reports/hunt-triage.md"
+echo "$(grep -vc '^#' "$LEDGER") slugs now in $LEDGER (excluded next run)"
 echo "next: read the top (tier A/B, starred clusters), confirm by hand, file."

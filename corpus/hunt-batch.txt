@@ -1,0 +1,21 @@
+# slug@version download-url — hunt batch pinned 2026-10-30: browse=updated, >=10000 installs, excludes already-covered slugs (158 known)
+woo-product-filter@3.4.8 https://downloads.wordpress.org/plugin/woo-product-filter.3.4.8.zip
+headers-security-advanced-hsts-wp@5.3.6 https://downloads.wordpress.org/plugin/headers-security-advanced-hsts-wp.5.3.6.zip
+blockspare@5.2.0 https://downloads.wordpress.org/plugin/blockspare.zip
+import-users-from-csv-with-meta@2.5.12 https://downloads.wordpress.org/plugin/import-users-from-csv-with-meta.2.5.12.zip
+ultimate-maps-by-supsystic@1.6.5 https://downloads.wordpress.org/plugin/ultimate-maps-by-supsystic.1.6.5.zip
+pricing-table-by-supsystic@1.12.4 https://downloads.wordpress.org/plugin/pricing-table-by-supsystic.1.12.4.zip
+google-maps-easy@1.16.1 https://downloads.wordpress.org/plugin/google-maps-easy.1.16.1.zip
+data-tables-generator-by-supsystic@1.15.7 https://downloads.wordpress.org/plugin/data-tables-generator-by-supsystic.1.15.7.zip
+inspiro-starter-sites@1.4.0 https://downloads.wordpress.org/plugin/inspiro-starter-sites.1.4.0.zip
+all-in-one-wp-security-and-firewall@5.5.1 https://downloads.wordpress.org/plugin/all-in-one-wp-security-and-firewall.5.5.1.zip
+simpletoc@7.4.1 https://downloads.wordpress.org/plugin/simpletoc.7.4.1.zip
+drag-and-drop-multiple-file-upload-contact-form-7@1.4.1 https://downloads.wordpress.org/plugin/drag-and-drop-multiple-file-upload-contact-form-7.1.4.1.zip
+change-wp-admin-login@2.5.1 https://downloads.wordpress.org/plugin/change-wp-admin-login.2.5.1.zip
+hcaptcha-for-forms-and-more@5.5.0 https://downloads.wordpress.org/plugin/hcaptcha-for-forms-and-more.5.5.0.zip
+superb-blocks@4.2.5 https://downloads.wordpress.org/plugin/superb-blocks.4.2.5.zip
+optima-express@9.0.1 https://downloads.wordpress.org/plugin/optima-express.9.0.1.zip
+members@3.3.1 https://downloads.wordpress.org/plugin/members.3.3.1.zip
+event-organiser@3.12.12 https://downloads.wordpress.org/plugin/event-organiser.3.12.12.zip
+jeg-elementor-kit@3.3.0 https://downloads.wordpress.org/plugin/jeg-elementor-kit.3.3.0.zip
+nav-menu-roles@3.0.0 https://downloads.wordpress.org/plugin/nav-menu-roles.3.0.0.zip
