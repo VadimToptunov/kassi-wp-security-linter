@@ -19,5 +19,6 @@ object Inspections {
             WP011UnsafeFileUploadInspection.RULE_ID to WP011UnsafeFileUploadInspection(),
             WP012PrivilegeEscalationInspection.RULE_ID to WP012PrivilegeEscalationInspection(),
             WP013ShortcodeAttributeXssInspection.RULE_ID to WP013ShortcodeAttributeXssInspection(),
+            WP014PopChainInspection.RULE_ID to WP014PopChainInspection(),
         )
 }

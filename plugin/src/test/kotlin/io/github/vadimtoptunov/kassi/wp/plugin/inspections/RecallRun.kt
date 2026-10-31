@@ -17,6 +17,10 @@ class RecallRun : BasePlatformTestCase() {
     private fun meta(dir: File, key: String): String =
         Regex("""^$key:\s*"?([^"\n]+)"?""", RegexOption.MULTILINE).find(File(dir, "meta.yml").readText())!!.groupValues[1].trim()
 
+    /** Optional meta key: "" when absent (unlike [meta], which requires the key). */
+    private fun metaOrEmpty(dir: File, key: String): String =
+        Regex("""^$key:\s*"?([^"\n]+)"?""", RegexOption.MULTILINE).find(File(dir, "meta.yml").readText())?.groupValues?.get(1)?.trim().orEmpty()
+
     private fun codeLines(f: File): Set<String> =
         f.readLines().drop(4).map { it.trim() }.filter { it.length > 3 && !it.startsWith("//") }.toSet()
 
@@ -37,6 +41,10 @@ class RecallRun : BasePlatformTestCase() {
             .flatMap { r -> r.listFiles { f -> f.isDirectory }!!.sortedBy { it.name } }) {
             val ruleId = caseDir.parentFile.name
             val tool = Inspections.byRuleId[ruleId] ?: continue
+            // Synthetic cases illustrate a CVE whose real source is not a wordpress.org plugin
+            // (e.g. a Composer package), so there is no release zip to fetch. They are proven by
+            // CorpusAcceptanceTest, not by recall on full sources — skip them here.
+            if (metaOrEmpty(caseDir, "synthetic").equals("true", ignoreCase = true)) continue
             total++
             val slug = meta(caseDir, "plugin_slug")
             val path = meta(caseDir, "file")

@@ -1,0 +1,27 @@
+<html>
+<body>
+<p>Reports a PHP object-injection <i>chain</i> (CWE-502): a file that holds both an attacker-reachable deserialization sink and a <b>POP gadget</b> &mdash; a class whose magic method (<code>__destruct</code>, <code>__wakeup</code>, <code>__toString</code>, <code>__call</code>, <code>__get</code>, <code>__set</code>) performs a dangerous operation (file write or delete, <code>$wpdb</code> SQL, <code>exec</code>/<code>include</code>, an outbound HTTP request, or an option write). Once an attacker can inject an object through the sink, the gadget completes the exploit.</p>
+
+<p>The sink is either <code>unserialize()</code>/<code>maybe_unserialize()</code> of request data, or a file operation on a request-derived path that can carry a <code>phar://</code> wrapper (PHAR deserialization).</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>// sink: a request-controlled path reaches a file op (phar:// → deserialization)
+$file = $_GET['tpl'];
+if ( file_exists( $file ) ) { /* ... */ }
+
+// gadget in the same (or any co-installed) plugin
+class Cache_Writer {
+    public $path;
+    public function __destruct() { unlink( $this->path ); } // attacker-chosen file
+}</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>$file = realpath( $dir . '/' . basename( $_GET['tpl'] ) );
+if ( $file &amp;&amp; str_starts_with( $file, $dir ) &amp;&amp; file_exists( $file ) ) { /* ... */ }
+// unserialize( $data, array( 'allowed_classes' =&gt; false ) ) for the unserialize sink</code></pre>
+
+<p>The whole-project report and the headless corpus run pair a sink in one plugin with a gadget in <i>any</i> co-installed plugin (or WP core) and rank the chains by reachability and gadget danger. This inspection is the single-file, same-plugin projection: it stays silent unless both halves are in view, so a lone sink (WP-009's concern) or a harmless magic method does not fire.</p>
+<!-- tooltip end -->
+<p>Rule WP-014 · CWE-502 · see the kassi-wp-rules repository for references.</p>
+</body>
+</html>

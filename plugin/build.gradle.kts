@@ -123,6 +123,17 @@ tasks.test {
         systemProperty("kassi.fprun.report", layout.buildDirectory.file("reports/fp-run.md").get().asFile.absolutePath)
         outputs.upToDateWhen { false }
     }
+    // Opt-in cross-plugin POP-chain run (WP-014): builds the sink + gadget catalogs over the whole
+    // plugin corpus and ranks the candidate chains. -Pkassi.popchain scans corpus/plugins;
+    // -Pkassi.popchain=<dir> scans another folder of plugin directories.
+    val popChain = providers.gradleProperty("kassi.popchain")
+    if (popChain.isPresent) {
+        val dir = popChain.get().takeIf { it.isNotBlank() && it != "true" }?.let { file(it) }
+            ?: rootProject.layout.projectDirectory.dir("corpus/plugins").asFile
+        systemProperty("kassi.popchain.dir", dir.absolutePath)
+        systemProperty("kassi.popchain.report", layout.buildDirectory.file("reports/pop-chain-run.md").get().asFile.absolutePath)
+        outputs.upToDateWhen { false }
+    }
     // Opt-in recall run on full CVE plugin sources (corpus/fetch-recall.sh).
     if (providers.gradleProperty("kassi.recall").isPresent) {
         systemProperty("kassi.recall.dir", rootProject.layout.projectDirectory.dir("corpus/recall").asFile.absolutePath)

@@ -13,6 +13,9 @@ root = sys.argv[1]
 for dirpath, _, files in os.walk(root):
     if 'meta.yml' in files:
         meta = open(os.path.join(dirpath, 'meta.yml')).read()
+        # Synthetic cases illustrate a CVE with no wordpress.org release to fetch; skip them.
+        if re.search(r'^synthetic:\s*true\b', meta, re.M):
+            continue
         get = lambda k: re.search(rf'^{k}:\s*"?([^"\n]+)"?', meta, re.M).group(1).strip()
         print(get('plugin_slug'), get('version_before'))
         print(get('plugin_slug'), get('version_after'))

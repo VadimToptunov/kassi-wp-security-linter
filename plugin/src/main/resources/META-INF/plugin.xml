@@ -7,7 +7,7 @@
     <p>Find security vulnerabilities in WordPress plugin and theme code as you type in PhpStorm:
     SQL injection, cross-site scripting (XSS), CSRF and missing nonce checks, missing capability checks,
     unprotected REST routes, server-side request forgery (SSRF), PHP object injection, path traversal and
-    unsafe file uploads. Thirteen static inspections, each mapped to a CWE and backed by real, fixed CVEs
+    unsafe file uploads. Fourteen static inspections, each mapped to a CWE and backed by real, fixed CVEs
     from the WordPress plugin ecosystem. For every rule, the vulnerable code is flagged and the fixed code
     stays silent.</p>
     <h3>Inspections</h3>
@@ -25,6 +25,7 @@
       <li><b>WP-011</b> Uploaded file stored without a file type check (CWE-434)</li>
       <li><b>WP-012</b> Request data decides a user role or capabilities (CWE-269)</li>
       <li><b>WP-013</b> Shortcode attributes output without escaping, i.e. stored XSS (CWE-79)</li>
+      <li><b>WP-014</b> PHP object injection reaching a POP gadget chain, including cross-plugin chains (CWE-502)</li>
     </ul>
     <h3>Built for precision</h3>
     <ul>
@@ -110,6 +111,10 @@
                          displayName="WP-013 Shortcode attributes output without escaping (stored XSS)"
                          groupName="Kassi WordPress Security" enabledByDefault="true" level="WARNING"
                          implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP013ShortcodeAttributeXssInspection"/>
+        <localInspection language="PHP" shortName="WP014PopChain"
+                         displayName="WP-014 PHP object injection reaching a POP gadget chain"
+                         groupName="Kassi WordPress Security" enabledByDefault="true" level="ERROR"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP014PopChainInspection"/>
     </extensions>
 
     <actions>

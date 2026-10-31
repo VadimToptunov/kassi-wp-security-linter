@@ -81,3 +81,18 @@ function demo_badge_shortcode( $atts ) {
 	$a = shortcode_atts( array( 'color' => 'blue', 'label' => '' ), $atts );
 	return '<span class="badge badge-' . $a['color'] . '">' . $a['label'] . '</span>';
 }
+
+// WP-014: object injection reaching a POP gadget chain (unauthenticated PHAR vector + file-delete gadget).
+add_action( 'wp_ajax_nopriv_demo_render', 'demo_render' );
+function demo_render() {
+	$template = $_GET['template'];        // may be phar://evil.phar/x
+	if ( file_exists( $template ) ) {     // phar:// deserialization on a request-derived path
+		include $template;
+	}
+}
+class Demo_Cache_Entry {
+	public $file;
+	public function __destruct() {        // POP gadget: deletes an attacker-chosen file
+		unlink( $this->file );
+	}
+}
