@@ -24,6 +24,12 @@ function p_insert($request) {
 function p_wholesale_update() {
     wp_update_user(<error descr="Request data ($_POST) decides a user's role or capabilities in wp_update_user(): privilege escalation. Use a fixed role or an allow-list">$_POST</error>);
 }
+function p_builtup_role_from_request() {
+    $info = array('user_login' => 'x');
+    $info['user_url'] = $_GET['website'];
+    $info['role'] = <error descr="Request data ($_POST) decides a user's role or capabilities in wp_insert_user(): privilege escalation. Use a fixed role or an allow-list">sanitize_text_field($_POST['role'])</error>;
+    wp_insert_user($info);
+}
 function p_caps() {
     global $wpdb;
     update_user_meta(get_current_user_id(), $wpdb->prefix . 'capabilities', <error descr="Request data ($_POST) decides a user's role or capabilities in update_user_meta(): privilege escalation. Use a fixed role or an allow-list">$_POST['caps']</error>);
