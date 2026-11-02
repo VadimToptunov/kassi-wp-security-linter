@@ -115,6 +115,10 @@
                          displayName="WP-014 PHP object injection reaching a POP gadget chain"
                          groupName="Kassi WordPress Security" enabledByDefault="true" level="ERROR"
                          implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP014PopChainInspection"/>
+        <localInspection language="PHP" shortName="JL005UnpreparedSql"
+                         displayName="JL-005 SQL built from request data without $db-&gt;quote()/escape()"
+                         groupName="Kassi Joomla Security" enabledByDefault="true" level="ERROR"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.JL005UnpreparedSqlInspection"/>
     </extensions>
 
     <actions>

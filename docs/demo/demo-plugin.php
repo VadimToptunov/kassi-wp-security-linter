@@ -96,3 +96,12 @@ class Demo_Cache_Entry {
 		unlink( $this->file );
 	}
 }
+
+// JL-005 (Joomla): request input reaches $db->setQuery() without $db->quote() or an (int) cast.
+function demo_joomla_find() {
+	$db    = Factory::getDbo();
+	$input = Factory::getApplication()->input;
+	$alias = $input->get( 'alias' );      // bare JInput ->get on the input object
+	$db->setQuery( "SELECT * FROM #__content WHERE alias = '" . $alias . "'" );
+	return $db->loadObject();
+}

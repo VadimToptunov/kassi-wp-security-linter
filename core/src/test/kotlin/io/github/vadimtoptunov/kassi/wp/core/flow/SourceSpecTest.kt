@@ -8,11 +8,14 @@ import kotlin.test.assertTrue
 
 class SourceSpecTest {
     @Test
-    fun `parses the four source notations`() {
+    fun `parses the source notations`() {
         assertEquals(SourceSpec.Superglobal("_GET", null), SourceSpec.parse("\$_GET"))
         assertEquals(SourceSpec.Superglobal("_SERVER", "REQUEST_URI"), SourceSpec.parse("\$_SERVER[REQUEST_URI]"))
         assertEquals(SourceSpec.Method("get_param"), SourceSpec.parse("->get_param"))
         assertEquals(SourceSpec.Function("filter_input"), SourceSpec.parse("filter_input"))
+        // Receiver-qualified: `$input->get` is a method `get` bound to a receiver named `input` (both lowercased).
+        assertEquals(SourceSpec.QualifiedMethod("input", "get"), SourceSpec.parse("\$input->get"))
+        assertEquals(SourceSpec.QualifiedMethod("jinput", "get"), SourceSpec.parse("\$jinput->get"))
     }
 
     @Test

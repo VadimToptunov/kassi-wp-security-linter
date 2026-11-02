@@ -264,9 +264,12 @@ class TaintAnalyzer(
             AstKind.CALL -> evalCall(n)
             AstKind.METHOD_CALL -> {
                 val name = n.name?.lowercase()
+                val recv = n.child(AstRole.RECEIVER)?.name?.lowercase()
                 when {
                     name == null || name in spec.sanitizerMethods -> null
                     spec.sources.any { it is SourceSpec.Method && it.name == name } -> Taint(setOf("->$name()"))
+                    spec.sources.any { it is SourceSpec.QualifiedMethod && it.name == name && it.receiver == recv } ->
+                        Taint(setOf("\$$recv->$name()"))
                     else -> null
                 }
             }
