@@ -22,12 +22,12 @@ class RuleValidationException(val origin: String, val errors: List<String>) :
  * All errors of a file are reported together.
  */
 object RuleParser {
-    private val ID = Regex("""^WP-\d{3}$""")
+    private val ID = Regex("""^(WP|JL)-\d{3}$""")
     private val CVE = Regex("""^CVE-\d{4}-\d{4,}$""")
-    private val CORPUS = Regex("""^WP-\d{3}/case-\d{2}$""")
+    private val CORPUS = Regex("""^(WP|JL)-\d{3}/case-\d{2}$""")
     private val URL = Regex("""^https://\S+$""")
 
-    val SUPPORTED_PLATFORMS = setOf("wordpress")
+    val SUPPORTED_PLATFORMS = setOf("wordpress", "joomla")
     private val QUICK_FIX_NONE = "none"
 
     private val CORE_KEYS = setOf(
@@ -59,7 +59,7 @@ object RuleParser {
                 if (m[key] !is Map<*, *>) errors += "unknown key '$k' (overlays must be mappings; is it a typo?)"
             }
 
-            val id = string("id")?.also { if (!ID.matches(it)) errors += "id '$it' must match WP-NNN" }
+            val id = string("id")?.also { if (!ID.matches(it)) errors += "id '$it' must match WP-NNN or JL-NNN" }
             val platform = string("platform")?.also {
                 if (it !in SUPPORTED_PLATFORMS) errors += "platform '$it' is not supported (expected one of $SUPPORTED_PLATFORMS)"
             }
@@ -135,7 +135,7 @@ object RuleParser {
                 val fix = optionalString("fix_commit", item, "$path.fix_commit")
                     ?.also { if (!URL.matches(it)) errors += "$path.fix_commit must be an https URL" }
                 val corpus = optionalString("corpus", item, "$path.corpus")
-                    ?.also { if (!CORPUS.matches(it)) errors += "$path.corpus '$it' must look like WP-NNN/case-NN" }
+                    ?.also { if (!CORPUS.matches(it)) errors += "$path.corpus '$it' must look like WP-NNN/case-NN or JL-NNN/case-NN" }
                 cve?.let { Reference(it, fix, corpus) }
             }
             return refs.takeIf { errors.size == before }

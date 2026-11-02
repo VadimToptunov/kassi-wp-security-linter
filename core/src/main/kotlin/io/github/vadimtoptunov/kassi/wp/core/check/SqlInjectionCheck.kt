@@ -17,6 +17,10 @@ class SqlInjectionCheck(rule: Rule) : TaintCheck(rule) {
     private val receivers = rule.params.strings("receivers").map { it.lowercase() }.toSet()
     private val sinkMethods = rule.params.strings("sink_methods").map { it.lowercase() }.toSet()
 
+    // Platform-aware display: WordPress uses $wpdb->prepare(); Joomla uses $db->quote()/escape().
+    private val dbVar = if (rule.platform == "joomla") "\$db" else "\$wpdb"
+    private val safeHint = if (rule.platform == "joomla") "\$db->quote()/escape() or an (int) cast" else "\$wpdb->prepare() placeholders"
+
     override fun sinkArguments(node: AstNode): List<AstNode> {
         if (node.kind != AstKind.METHOD_CALL || node.name?.lowercase() !in sinkMethods) return emptyList()
         val receiver = node.child(AstRole.RECEIVER) ?: return emptyList()
@@ -30,6 +34,6 @@ class SqlInjectionCheck(rule: Rule) : TaintCheck(rule) {
     }
 
     override fun message(sink: AstNode, taint: Taint): String =
-        "SQL built from request data (${taint.label}) reaches \$wpdb->${sink.name}() without " +
-            "\$wpdb->prepare() placeholders"
+        "SQL built from request data (${taint.label}) reaches $dbVar->${sink.name}() without " +
+            safeHint
 }
