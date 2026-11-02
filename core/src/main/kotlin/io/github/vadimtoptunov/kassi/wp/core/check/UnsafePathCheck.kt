@@ -19,6 +19,10 @@ class UnsafePathCheck(rule: Rule) : TaintCheck(rule) {
         .mapValues { (_, v) -> v.split(',').map { it.trim().toInt() } }
     private val includes = rule.params.strings("include_sinks").map { it.lowercase() }.toSet()
 
+    // Platform-aware hint: WordPress uses sanitize_file_name()/validate_file(); Joomla uses JPath::clean().
+    private val safeHint = if (rule.platform == "joomla") "basename(), JPath::clean() or a realpath() check"
+    else "sanitize_file_name(), basename() or a realpath()/validate_file() check"
+
     override fun sinkArguments(node: AstNode): List<AstNode> = when (node.kind) {
         AstKind.CALL -> sinkArgs[node.name?.lowercase()]?.mapNotNull { node.arguments.getOrNull(it) }.orEmpty()
         AstKind.INCLUDE -> if (node.name?.lowercase() in includes) node.arguments else emptyList()
@@ -27,7 +31,6 @@ class UnsafePathCheck(rule: Rule) : TaintCheck(rule) {
 
     override fun message(sink: AstNode, taint: Taint): String {
         val what = if (sink.kind == AstKind.INCLUDE) sink.name else "${sink.name}()"
-        return "File path built from request data (${taint.label}) reaches $what without sanitize_file_name(), " +
-            "basename() or a realpath()/validate_file() check"
+        return "File path built from request data (${taint.label}) reaches $what without $safeHint"
     }
 }

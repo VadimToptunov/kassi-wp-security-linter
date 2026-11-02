@@ -134,6 +134,16 @@ tasks.test {
         systemProperty("kassi.popchain.report", layout.buildDirectory.file("reports/pop-chain-run.md").get().asFile.absolutePath)
         outputs.upToDateWhen { false }
     }
+    // Opt-in Joomla reachability run: ranks request-input file sinks (include/read/PHAR) by how an
+    // unauthenticated attacker reaches them. -Pkassi.jreach=<dir> scans a folder of extension dirs.
+    val jreach = providers.gradleProperty("kassi.jreach")
+    if (jreach.isPresent) {
+        val dir = jreach.get().takeIf { it.isNotBlank() && it != "true" }?.let { file(it) }
+            ?: rootProject.layout.projectDirectory.dir("corpus/plugins").asFile
+        systemProperty("kassi.jreach.dir", dir.absolutePath)
+        systemProperty("kassi.jreach.report", layout.buildDirectory.file("reports/joomla-reachability.md").get().asFile.absolutePath)
+        outputs.upToDateWhen { false }
+    }
     // Opt-in recall run on full CVE plugin sources (corpus/fetch-recall.sh).
     if (providers.gradleProperty("kassi.recall").isPresent) {
         systemProperty("kassi.recall.dir", rootProject.layout.projectDirectory.dir("corpus/recall").asFile.absolutePath)

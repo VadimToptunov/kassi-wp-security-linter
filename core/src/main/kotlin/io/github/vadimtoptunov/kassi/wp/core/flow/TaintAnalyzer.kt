@@ -264,15 +264,27 @@ class TaintAnalyzer(
             AstKind.CALL -> evalCall(n)
             AstKind.METHOD_CALL -> {
                 val name = n.name?.lowercase()
+                val recv = n.child(AstRole.RECEIVER)?.name?.lowercase()
                 when {
                     name == null || name in spec.sanitizerMethods -> null
+                    // `$input->get($name, $default, 'INT')`: a numeric type filter in the 3rd argument
+                    // casts the value, so the read is SQL-safe (unlike the default 'cmd'/'string').
+                    name in spec.filterArgReaders && numericFiltered(n) -> null
                     spec.sources.any { it is SourceSpec.Method && it.name == name } -> Taint(setOf("->$name()"))
+                    spec.sources.any { it is SourceSpec.QualifiedMethod && it.name == name && it.receiver == recv } ->
+                        Taint(setOf("\$$recv->$name()"))
                     else -> null
                 }
             }
             // `($x)` and `@$x` are transparent; any other unmapped construct is not proven.
             AstKind.OTHER -> n.children.singleOrNull()?.takeIf { n.text.startsWith("(") || n.text.startsWith("@") }?.let(::eval)
             else -> null
+        }
+
+        /** A reader call whose 3rd argument is a string literal naming a value-casting type filter. */
+        fun numericFiltered(call: AstNode): Boolean {
+            val filter = call.arguments.getOrNull(2)?.takeIf { it.kind == AstKind.STRING_LITERAL } ?: return false
+            return filter.stringValue?.lowercase() in spec.sanitizingFilters
         }
 
         fun evalCall(n: AstNode): Taint? {

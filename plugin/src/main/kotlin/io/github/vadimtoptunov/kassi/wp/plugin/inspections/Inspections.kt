@@ -20,5 +20,9 @@ object Inspections {
             WP012PrivilegeEscalationInspection.RULE_ID to WP012PrivilegeEscalationInspection(),
             WP013ShortcodeAttributeXssInspection.RULE_ID to WP013ShortcodeAttributeXssInspection(),
             WP014PopChainInspection.RULE_ID to WP014PopChainInspection(),
+            // Joomla pack
+            JL005UnpreparedSqlInspection.RULE_ID to JL005UnpreparedSqlInspection(),
+            JL006UnescapedOutputInspection.RULE_ID to JL006UnescapedOutputInspection(),
+            JL007UnsafeFilePathInspection.RULE_ID to JL007UnsafeFilePathInspection(),
         )
 }

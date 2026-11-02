@@ -96,3 +96,24 @@ class Demo_Cache_Entry {
 		unlink( $this->file );
 	}
 }
+
+// JL-005 (Joomla): request input reaches $db->setQuery() without $db->quote() or an (int) cast.
+function demo_joomla_find() {
+	$db    = Factory::getDbo();
+	$input = Factory::getApplication()->input;
+	$alias = $input->get( 'alias' );      // bare JInput ->get on the input object
+	$db->setQuery( "SELECT * FROM #__content WHERE alias = '" . $alias . "'" );
+	return $db->loadObject();
+}
+
+// JL-006 (Joomla): request input echoed without htmlspecialchars()/$this->escape() (reflected XSS).
+function demo_joomla_search_box() {
+	$q = Factory::getApplication()->input->getRaw( 'q' );   // getRaw = no filtering
+	echo '<p class="search-for">You searched for: ' . $q . '</p>';
+}
+
+// JL-007 (Joomla): request input reaches require without basename()/JPath::clean() (LFI).
+function demo_joomla_render_view() {
+	$view = Factory::getApplication()->input->getString( 'view' );   // getString keeps '/'
+	require_once JPATH_COMPONENT . '/views/' . $view . '/view.html.php';
+}
