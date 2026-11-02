@@ -119,6 +119,14 @@
                          displayName="JL-005 SQL built from request data without $db-&gt;quote()/escape()"
                          groupName="Kassi Joomla Security" enabledByDefault="true" level="ERROR"
                          implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.JL005UnpreparedSqlInspection"/>
+        <localInspection language="PHP" shortName="JL006UnescapedOutput"
+                         displayName="JL-006 Request input echoed without htmlspecialchars()/$this-&gt;escape() (reflected XSS)"
+                         groupName="Kassi Joomla Security" enabledByDefault="true" level="WARNING"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.JL006UnescapedOutputInspection"/>
+        <localInspection language="PHP" shortName="JL007UnsafeFilePath"
+                         displayName="JL-007 File path from request input reaches include/require or a file read (LFI)"
+                         groupName="Kassi Joomla Security" enabledByDefault="true" level="WARNING"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.JL007UnsafeFilePathInspection"/>
     </extensions>
 
     <actions>

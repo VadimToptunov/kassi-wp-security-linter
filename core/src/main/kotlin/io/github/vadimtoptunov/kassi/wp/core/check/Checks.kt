@@ -32,8 +32,11 @@ object Checks {
         "WP-012" to ::PrivilegeEscalationCheck,
         "WP-013" to ::ShortcodeOutputCheck,
         "WP-014" to ::PopChainCheck,
-        // Joomla pack (reuses the param-driven checks). JL-005: $db->setQuery() SQLi.
+        // Joomla pack (reuses the param-driven checks). JL-005: $db->setQuery() SQLi;
+        // JL-006: reflected XSS (echo of request input); JL-007: LFI / path traversal.
         "JL-005" to ::SqlInjectionCheck,
+        "JL-006" to ::UnescapedOutputCheck,
+        "JL-007" to ::UnsafePathCheck,
         "WP-001" to { rule ->
             HookHandlerCheck(rule) { h, hook, sink, weak ->
                 "Handler ${HookHandlerCheck.Labels.handlerLabel(h)} (hook $hook) calls $sink() without a capability check (current_user_can)" +

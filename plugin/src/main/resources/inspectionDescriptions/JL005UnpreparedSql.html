@@ -3,9 +3,8 @@
 <p>Reports Joomla request data (superglobals, and the <code>JInput</code> getters
 <code>getString</code>, <code>getRaw</code>, <code>getCmd</code>, …, including the bare
 <code>$input-&gt;get()</code> / <code>$app-&gt;input-&gt;get()</code>) that reaches the SQL text of
-<code>$db-&gt;setQuery()</code> (or <code>$db-&gt;query()</code>/<code>$db-&gt;q()</code>) through
-assignments, concatenation or string interpolation, without <code>$db-&gt;quote()</code>/
-<code>$db-&gt;escape()</code> or an integer cast (CWE-89, SQL Injection).</p>
+<code>$db-&gt;setQuery()</code> through assignments, concatenation or string interpolation, without
+<code>$db-&gt;quote()</code>/<code>$db-&gt;escape()</code> or an integer cast (CWE-89, SQL Injection).</p>
 <p><code>$db-&gt;quote()</code>, <code>$db-&gt;escape()</code> and <code>(int)</code>/<code>$input-&gt;getInt()</code>
 make a value SQL-safe; <code>getString</code>/<code>getRaw</code>/<code>getCmd</code> do not.
 <code>$params-&gt;get()</code> (a Registry value, not request input) is not reported.</p>

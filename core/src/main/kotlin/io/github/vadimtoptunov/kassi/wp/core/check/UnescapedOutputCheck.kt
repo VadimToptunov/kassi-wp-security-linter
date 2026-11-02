@@ -10,11 +10,14 @@ import io.github.vadimtoptunov.kassi.wp.core.model.Rule
  * reflected flows only (input → output in one scope); stored values from the database are not tracked.
  */
 class UnescapedOutputCheck(rule: Rule) : TaintCheck(rule) {
+    // Platform-aware hint: WordPress escapes with esc_*(); Joomla views use htmlspecialchars/$this->escape().
+    private val escapeHint = if (rule.platform == "joomla") "htmlspecialchars(), \$this->escape()" else "esc_html, esc_attr, esc_url, wp_kses"
+
     override fun sinkArguments(node: AstNode): List<AstNode> = when (node.kind) {
         AstKind.ECHO, AstKind.PRINT -> node.arguments
         else -> emptyList()
     }
 
     override fun message(sink: AstNode, taint: Taint): String =
-        "Request data (${taint.label}) is output without escaping (esc_html, esc_attr, esc_url, wp_kses)"
+        "Request data (${taint.label}) is output without escaping ($escapeHint)"
 }

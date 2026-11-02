@@ -1,0 +1,27 @@
+<html>
+<body>
+<p>Reports Joomla request data (raw superglobals, and the <code>JInput</code> getters
+<code>getRaw()</code>/<code>getHtml()</code>) that is <code>echo</code>/<code>print</code>-ed through
+assignments, concatenation or string interpolation without <code>htmlspecialchars()</code>,
+<code>$this-&gt;escape()</code> or a numeric cast (CWE-79, reflected Cross-Site Scripting).</p>
+<p><code>htmlspecialchars()</code>/<code>$this-&gt;escape()</code> and
+<code>$input-&gt;getInt()</code>/<code>getUint()</code>/<code>getFloat()</code> make a value
+output-safe. The filter-typed readers <code>$input-&gt;get()</code> (default <code>cmd</code>),
+<code>getCmd()</code> and <code>getWord()</code> strip the HTML metacharacters, so they are not
+reported.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>$q = $app-&gt;input-&gt;getRaw('q');
+echo '&lt;p&gt;You searched for: ' . $q . '&lt;/p&gt;';</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>$q = $app-&gt;input-&gt;getRaw('q');
+echo '&lt;p&gt;You searched for: ' . htmlspecialchars($q, ENT_QUOTES) . '&lt;/p&gt;';</code></pre>
+
+<p>Reflected flows only, followed inside one function (or template top level). Values read back from
+the database (stored XSS) are not tracked. A CSRF token verified in the same function makes the
+finding weak.</p>
+<!-- tooltip end -->
+<p>Rule JL-006 · CWE-79 · see the kassi-wp-rules repository for references.</p>
+</body>
+</html>

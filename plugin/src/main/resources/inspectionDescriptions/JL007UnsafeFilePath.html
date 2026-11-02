@@ -1,0 +1,28 @@
+<html>
+<body>
+<p>Reports Joomla request data (raw superglobals, and the <code>JInput</code> getters
+<code>getString()</code>/<code>getRaw()</code>/<code>getPath()</code>, which keep directory
+separators) that reaches an <code>include</code>/<code>require</code> or the path argument of
+<code>readfile()</code>/<code>file_get_contents()</code>/<code>fopen()</code> through assignments,
+concatenation or string interpolation, without <code>basename()</code>, <code>realpath()</code> or
+an allow-list (CWE-22, Local File Inclusion / Path Traversal).</p>
+<p><code>basename()</code>/<code>realpath()</code>, the slash-stripping readers
+<code>$input-&gt;get()</code> (default <code>cmd</code>)/<code>getCmd()</code>/<code>getWord()</code>,
+and numeric casts defeat traversal. Joomla's static <code>JPath::clean()</code>/
+<code>JFile::makeSafe()</code> are also treated as safe.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>$view = $app-&gt;input-&gt;getString('view');
+require_once JPATH_COMPONENT . '/views/' . $view . '/view.html.php';</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>$view = $app-&gt;input-&gt;getCmd('view');   // cmd filter strips '/' and '..'
+require_once JPATH_COMPONENT . '/views/' . basename($view) . '/view.html.php';</code></pre>
+
+<p>The flow is followed inside one function only. A capability check (<code>authorise()</code>) in the
+same function makes the finding weak (only privileged users reach the sink). A static
+<code>JFile::read()</code> sink is not matched in this version.</p>
+<!-- tooltip end -->
+<p>Rule JL-007 · CWE-22 · see the kassi-wp-rules repository for references.</p>
+</body>
+</html>
