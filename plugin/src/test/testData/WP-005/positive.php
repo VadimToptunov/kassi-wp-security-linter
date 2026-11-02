@@ -39,3 +39,12 @@ function p_foreach() {
         $wpdb->query(<error descr="SQL built from request data ($_POST) reaches $wpdb->query() without $wpdb->prepare() placeholders">"UPDATE t SET v = '$v' WHERE k = '$k'"</error>);
     }
 }
+
+// A ternary whose condition is NOT an allow-list/type guard (isset) does not clean the value:
+// the result is still raw request data, so this must flag.
+function p_ternary_unguarded() {
+    global $wpdb;
+    $t = isset($_GET['t']) ? $_GET['t'] : 'x';
+    $sql = "SELECT * FROM " . $t;
+    return $wpdb->get_results(<error descr="SQL built from request data ($_GET) reaches $wpdb->get_results() without $wpdb->prepare() placeholders">$sql</error>);
+}

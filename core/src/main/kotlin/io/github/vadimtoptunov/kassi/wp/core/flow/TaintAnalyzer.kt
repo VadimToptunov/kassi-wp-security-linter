@@ -256,9 +256,19 @@ class TaintAnalyzer(
                 Taint.union(listOf(n.child(AstRole.LEFT), n.child(AstRole.RIGHT)).map { it?.let(::eval) })
             }
             AstKind.BINARY -> if (n.name == "??") Taint.union(listOf(n.child(AstRole.LEFT), n.child(AstRole.RIGHT)).map { it?.let(::eval) }) else null
-            AstKind.TERNARY -> Taint.union(
-                listOf(n.child(AstRole.LEFT) ?: n.child(AstRole.CONDITION), n.child(AstRole.RIGHT)).map { it?.let(::eval) },
-            )
+            // `guard($x) ? $x : $default` cleans the branch the guard protects, mirroring `if (guard)`:
+            // the then-value is safe when the condition is a positive guard on it (`in_array($t,$wl) ? $t : $d`),
+            // the else-value when the condition is a negative guard (`! in_array($t,$wl) ? $d : $t`).
+            AstKind.TERNARY -> {
+                val cond = n.child(AstRole.CONDITION)
+                val pos = cond?.let(::positiveGuards)?.toSet().orEmpty()
+                val neg = cond?.let(::negativeGuards)?.toSet().orEmpty()
+                fun evalBranch(b: AstNode?, g: Set<String>): Taint? = b?.let {
+                    if ((it.kind == AstKind.VARIABLE || it.kind == AstKind.ARRAY_ACCESS) && normalize(it.text) in g) null
+                    else eval(it)
+                }
+                Taint.union(listOf(evalBranch(n.child(AstRole.LEFT) ?: cond, pos), evalBranch(n.child(AstRole.RIGHT), neg)))
+            }
             AstKind.CAST -> if (n.name in CLEAN_CASTS) null else n.child(AstRole.VALUE)?.let(::eval)
             AstKind.ASSIGNMENT -> n.child(AstRole.VALUE)?.let(::eval)
             AstKind.CALL -> evalCall(n)

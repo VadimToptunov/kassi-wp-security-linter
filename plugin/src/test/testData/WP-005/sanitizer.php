@@ -27,3 +27,19 @@ function s_allowlist_early_exit() {
     }
     $wpdb->get_results("SELECT * FROM t ORDER BY $col");
 }
+
+// ...and as a ternary allow-list re-assignment (agile-store-locator attribute.php pattern): clean.
+function s_ternary_allowlist() {
+    global $wpdb;
+    $tables = array('a', 'b');
+    $t = $_REQUEST['table'];
+    $t = in_array($t, $tables, true) ? $t : $tables[0];
+    $wpdb->get_results("SELECT * FROM " . $t);
+}
+
+// A numeric ternary guard is clean too.
+function s_ternary_numeric() {
+    global $wpdb;
+    $id = is_numeric($_GET['id']) ? $_GET['id'] : 0;
+    $wpdb->query("DELETE FROM t WHERE id = $id");
+}
