@@ -68,6 +68,10 @@ sealed interface SourceSpec {
  *  - `params.clean_keys`       keys of `$_FILES` entries whose values are not attacker-controlled
  *                              (`$_FILES['f']['tmp_name']` is a server-generated path)
  *  - `params.host_prefix_cleans` `[true]` for URL rules: input after a fixed `scheme://host/` is clean
+ *  - `params.filter_arg_readers` reader methods whose 3rd argument is a type-filter string
+ *    (Joomla `$input->get($name, $default, 'INT')`); paired with [sanitizingFilters]
+ *  - `params.sanitizing_filters` the filter literals (`int`, `uint`, `float`, ...) that cast the read
+ *    value to a safe type — a [filterArgReaders] call with such a 3rd arg is treated as sanitized
  */
 class TaintSpec(
     val sources: List<SourceSpec>,
@@ -79,6 +83,8 @@ class TaintSpec(
     val terminators: Set<String> = emptySet(),
     val cleanKeys: Set<String> = emptySet(),
     val hostPrefixCleans: Boolean = false,
+    val filterArgReaders: Set<String> = emptySet(),
+    val sanitizingFilters: Set<String> = emptySet(),
 ) {
     companion object {
         fun of(rule: Rule): TaintSpec {
@@ -93,6 +99,8 @@ class TaintSpec(
                 terminators = rule.params.strings("terminators").map { it.lowercase() }.toSet(),
                 cleanKeys = rule.params.strings("clean_keys").toSet(),
                 hostPrefixCleans = rule.params.strings("host_prefix_cleans").firstOrNull()?.toBoolean() == true,
+                filterArgReaders = rule.params.strings("filter_arg_readers").map { it.lowercase() }.toSet(),
+                sanitizingFilters = rule.params.strings("sanitizing_filters").map { it.lowercase() }.toSet(),
             )
         }
     }

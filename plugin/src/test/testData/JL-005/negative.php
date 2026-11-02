@@ -25,3 +25,19 @@ function jl005_params_get($db, $params) {
     $db->setQuery("SELECT * FROM #__content LIMIT " . $limit);
     return $db->loadObjectList();
 }
+
+// 3rd-arg numeric type filter: get('id', 0, 'INT') returns an int -> safe (the JD-Builder FP class).
+function jl005_filtered_get($db, $input) {
+    $id = $input->get('id', 0, 'INT');
+    $db->setQuery("SELECT * FROM #__content WHERE id = " . $id);
+    return $db->loadObject();
+}
+
+// $db->q() is Joomla's quote() alias (a sanitizer), not a sink taking SQL -> must stay silent.
+// This is the ~20-finding FP class from hunt #1 (query builders quoting their operands).
+function jl005_q_is_not_a_sink($db, $input) {
+    $name = $input->getString('name');
+    $quoted = $db->q($name);
+    $db->setQuery("SELECT * FROM #__content WHERE name = " . $quoted);
+    return $db->loadObject();
+}
