@@ -21,6 +21,7 @@ object Inspections {
             WP013ShortcodeAttributeXssInspection.RULE_ID to WP013ShortcodeAttributeXssInspection(),
             WP014PopChainInspection.RULE_ID to WP014PopChainInspection(),
             WP015CommandInjectionInspection.RULE_ID to WP015CommandInjectionInspection(),
+            WP016CodeInjectionInspection.RULE_ID to WP016CodeInjectionInspection(),
             // Joomla pack
             JL005UnpreparedSqlInspection.RULE_ID to JL005UnpreparedSqlInspection(),
             JL006UnescapedOutputInspection.RULE_ID to JL006UnescapedOutputInspection(),
