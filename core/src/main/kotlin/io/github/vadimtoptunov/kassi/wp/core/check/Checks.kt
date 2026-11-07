@@ -32,6 +32,7 @@ object Checks {
         "WP-012" to ::PrivilegeEscalationCheck,
         "WP-013" to ::ShortcodeOutputCheck,
         "WP-014" to ::PopChainCheck,
+        "WP-015" to ::CommandInjectionCheck,
         // Joomla pack (reuses the param-driven checks). JL-005: $db->setQuery() SQLi;
         // JL-006: reflected XSS (echo of request input); JL-007: LFI / path traversal.
         "JL-005" to ::SqlInjectionCheck,

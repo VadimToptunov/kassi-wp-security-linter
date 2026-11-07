@@ -78,12 +78,12 @@ class SettingsAndReportTest : BasePlatformTestCase() {
         assertEquals(1, report.filesScanned)
         val rulesFound = report.entries.map { it.rule.id }.toSet()
         assertEquals(io.github.vadimtoptunov.kassi.wp.plugin.inspections.Inspections.byRuleId.keys, rulesFound)
-        assertEquals(17, report.rulesChecked.size)
+        assertEquals(18, report.rulesChecked.size)
     }
 
     fun testEmptyProjectStillListsTheRulesThatWouldBeChecked() {
         val report = GenerateReportAction.buildReport(project, null)
         assertEquals(0, report.filesScanned)
-        assertEquals(17, report.rulesChecked.size)
+        assertEquals(18, report.rulesChecked.size)
     }
 }

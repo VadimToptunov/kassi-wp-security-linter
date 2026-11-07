@@ -97,6 +97,12 @@ class Demo_Cache_Entry {
 	}
 }
 
+// WP-015: request data used as an OS command (exec/system/shell_exec/...) without escapeshellarg().
+function demo_ping_tool() {
+	$host = $_POST['host'];
+	echo shell_exec( 'ping -c 1 ' . $host );
+}
+
 // JL-005 (Joomla): request input reaches $db->setQuery() without $db->quote() or an (int) cast.
 function demo_joomla_find() {
 	$db    = Factory::getDbo();

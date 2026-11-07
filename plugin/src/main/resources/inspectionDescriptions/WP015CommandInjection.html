@@ -1,0 +1,26 @@
+<html>
+<body>
+<p>Reports request data (<code>$_GET</code>, <code>$_POST</code>, <code>$_REQUEST</code>,
+<code>$_COOKIE</code>, REST parameters) that reaches the command argument of <code>exec()</code>,
+<code>system()</code>, <code>shell_exec()</code>, <code>passthru()</code>, <code>popen()</code> or
+<code>proc_open()</code> (CWE-78, OS Command Injection).</p>
+<p>Shell metacharacters such as <code>;</code>, <code>|</code>, <code>&amp;&amp;</code> or <code>$(...)</code>
+in the request let an attacker run arbitrary commands on the server &mdash; remote code execution.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>$host = $_POST['host'];
+system( 'ping -c 1 ' . $host );</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>$host = $_POST['host'];
+system( 'ping -c 1 ' . escapeshellarg( $host ) );</code></pre>
+
+<p><code>escapeshellarg()</code> (around each argument) and <code>escapeshellcmd()</code> are the
+accepted defences; <code>wp_unslash()</code>, <code>sanitize_text_field()</code>, <code>trim()</code>
+and <code>urldecode()</code> do not neutralise shell metacharacters. An <code>in_array()</code> /
+<code>ctype_*</code> allow-list, or a capability check in the same function, lowers the severity. The
+flow is followed inside one function only.</p>
+<!-- tooltip end -->
+<p>Rule WP-015 &middot; CWE-78 &middot; see the kassi-wp-rules repository for references.</p>
+</body>
+</html>
