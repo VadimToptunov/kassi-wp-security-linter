@@ -125,4 +125,12 @@ class PhpPsiAstNodeTest : BasePlatformTestCase() {
         assertEquals("_REQUEST", str.children[0].child(AstRole.RECEIVER)?.name)
         assertEquals(str, str.children[0].parent)
     }
+
+    fun testEvalIsModelledAsACallNamedEval() {
+        val root = parse("<?php\neval(${'$'}_POST['code']);\n")
+        val call = root.first(AstKind.CALL)
+        assertEquals("eval", call.name)
+        assertEquals(listOf(AstKind.ARRAY_ACCESS), call.arguments.map { it.kind })
+        assertEquals("_POST", call.arguments[0].child(AstRole.RECEIVER)?.name)
+    }
 }

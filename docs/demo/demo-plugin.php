@@ -103,6 +103,13 @@ function demo_ping_tool() {
 	echo shell_exec( 'ping -c 1 ' . $host );
 }
 
+// WP-016: request data evaluated as PHP code by eval()/assert()/create_function() (code injection).
+function demo_calc_eval() {
+	$expr = $_POST['expr'];
+	eval( '$result = ' . $expr . ';' );
+	return $result;
+}
+
 // JL-005 (Joomla): request input reaches $db->setQuery() without $db->quote() or an (int) cast.
 function demo_joomla_find() {
 	$db    = Factory::getDbo();

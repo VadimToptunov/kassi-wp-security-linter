@@ -31,6 +31,7 @@ import com.jetbrains.php.lang.psi.elements.NewExpression
 import com.jetbrains.php.lang.psi.elements.Parameter
 import com.jetbrains.php.lang.psi.elements.PhpClass
 import com.jetbrains.php.lang.psi.elements.PhpEchoStatement
+import com.jetbrains.php.lang.psi.elements.PhpEval
 import com.jetbrains.php.lang.psi.elements.PhpExpression
 import com.jetbrains.php.lang.psi.elements.PhpPrintExpression
 import com.jetbrains.php.lang.psi.elements.PhpReturn
@@ -80,7 +81,7 @@ class PhpPsiAstNode private constructor(val psi: PsiElement) : AstNode {
             is FunctionReference -> psi.parameters.toList() // also MethodReference
             is NewExpression -> psi.parameters.toList()
             is PhpEchoStatement -> psi.arguments.toList()
-            is PhpPrintExpression, is Include -> significantChildren(psi).take(1)
+            is PhpPrintExpression, is Include, is PhpEval -> significantChildren(psi).take(1)
             is ArrayCreationExpression -> significantChildren(psi).filter { isArrayEntry(it) }
             else -> emptyList()
         }
@@ -208,6 +209,9 @@ class PhpPsiAstNode private constructor(val psi: PsiElement) : AstNode {
             is Method -> AstKind.METHOD
             is Function -> if (psi.isClosure) AstKind.CLOSURE else AstKind.FUNCTION
             is MethodReference -> if (psi.isStatic) AstKind.STATIC_CALL else AstKind.METHOD_CALL
+            // `eval(...)` is a language construct (PhpEval), not a FunctionReference; model it as a call
+            // named "eval" with its code expression as the single argument so sink rules can reach it.
+            is PhpEval -> AstKind.CALL
             is FunctionReference -> AstKind.CALL
             is NewExpression -> AstKind.NEW
             is Variable -> AstKind.VARIABLE
@@ -244,7 +248,7 @@ class PhpPsiAstNode private constructor(val psi: PsiElement) : AstNode {
         private fun nameOf(psi: PsiElement, kind: AstKind): String? = when (kind) {
             AstKind.FUNCTION, AstKind.METHOD -> (psi as Function).name
             AstKind.CLASS -> (psi as PhpClass).name
-            AstKind.CALL, AstKind.METHOD_CALL, AstKind.STATIC_CALL -> (psi as FunctionReference).name
+            AstKind.CALL, AstKind.METHOD_CALL, AstKind.STATIC_CALL -> if (psi is PhpEval) "eval" else (psi as FunctionReference).name
             AstKind.NEW -> (psi as NewExpression).classReference?.name
             AstKind.VARIABLE -> (psi as Variable).name.takeIf { it.isNotEmpty() }
             AstKind.PROPERTY_ACCESS -> (psi as FieldReference).name

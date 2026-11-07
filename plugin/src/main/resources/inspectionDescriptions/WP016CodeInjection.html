@@ -1,0 +1,25 @@
+<html>
+<body>
+<p>Reports request data (<code>$_GET</code>, <code>$_POST</code>, <code>$_REQUEST</code>,
+<code>$_COOKIE</code>, REST parameters) that reaches the code argument of <code>eval()</code> or
+<code>assert()</code>, or the body argument of <code>create_function()</code> (CWE-94, PHP Code
+Injection).</p>
+<p>Any PHP in the request then runs on the server &mdash; remote code execution.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>$formula = $_POST['expr'];
+eval( '$result = ' . $formula . ';' );</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>$formula = $_POST['expr'];
+// Evaluate with a safe arithmetic parser, never eval().
+$result = my_plugin_safe_math( $formula );</code></pre>
+
+<p>There is no escaping that makes evaluating request data as PHP safe &mdash; do not pass request data
+to <code>eval()</code>. An <code>(int)</code> cast, an <code>in_array()</code> / <code>ctype_*</code>
+allow-list, or a literal / option value are treated as safe. A capability check in the same function
+lowers the severity. The flow is followed inside one function only.</p>
+<!-- tooltip end -->
+<p>Rule WP-016 &middot; CWE-94 &middot; see the kassi-wp-rules repository for references.</p>
+</body>
+</html>
