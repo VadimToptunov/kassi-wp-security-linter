@@ -103,6 +103,12 @@ class TaintAnalyzer(
                         env.remove(arr)
                         env.keys.removeAll { it.startsWith(elementPrefix(arr)) }
                     }
+                    // Same clean when the iterated container is a SUPERGLOBAL element sanitized in place:
+                    // foreach ($_REQUEST['id'] as $k => $v) { $_REQUEST['id'][$k] = absint($v); }.
+                    val globalElem = iterated?.takeIf(::isSuperglobalElement)?.let(::elementKey)
+                    if (globalElem != null && k != null && cleansEveryElementOf(n, iterated, k)) {
+                        sanitizedGlobalElems += globalElem
+                    }
                 }
                 AstKind.IF -> visitIf(n)
                 else -> n.children.forEach(::visit)
@@ -185,6 +191,13 @@ class TaintAnalyzer(
         /** Variables holding one `$_FILES` entry (`$f = $_FILES['image']`). */
         val filesAliases = mutableSetOf<String>()
 
+        /**
+         * Superglobal elements sanitized in place by a `foreach` (`foreach ($_REQUEST['id'] as $k => $v)
+         * { $_REQUEST['id'][$k] = absint($v); }`), keyed by their canonical element key ("_REQUEST[id]").
+         * A later read of that exact element is clean — the loop overwrote every element with a sanitizer.
+         */
+        val sanitizedGlobalElems = mutableSetOf<String>()
+
         fun assign(target: AstNode, t: Taint?) = assign(target, t, null)
 
         fun assign(target: AstNode, t: Taint?, value: AstNode?) {
@@ -200,7 +213,11 @@ class TaintAnalyzer(
                 }
                 AstKind.ARRAY_ACCESS -> rootVariable(target)?.let { name ->
                     // $a['k'] = v: a strong update of that element ...
-                    elementKey(target)?.let { env[it] = t ?: CLEAN }
+                    elementKey(target)?.let { ek ->
+                        env[ek] = t ?: CLEAN
+                        // a direct re-assignment to a tainted value cancels any earlier in-place sanitize
+                        if (t != null && t.sources.isNotEmpty()) sanitizedGlobalElems -= ek
+                    }
                     // ... and a weak update of the whole array (for reads without a literal key).
                     t?.let { env[name] = it + env[name] }
                 }
@@ -212,6 +229,27 @@ class TaintAnalyzer(
             a.kind == AstKind.ASSIGNMENT && a.child(AstRole.TARGET)?.let { t ->
                 t.kind == AstKind.ARRAY_ACCESS && t.child(AstRole.RECEIVER)?.name == arr && t.child(AstRole.KEY)?.name == key
             } == true && a.child(AstRole.VALUE)?.let { v -> v.kind == AstKind.CALL && v.name?.lowercase() in spec.sanitizerFunctions } == true
+        }
+
+        /** `$_REQUEST['id']` etc.: an array element whose root receiver is a superglobal. */
+        fun isSuperglobalElement(n: AstNode): Boolean =
+            n.kind == AstKind.ARRAY_ACCESS &&
+                n.child(AstRole.RECEIVER)?.takeIf { it.kind == AstKind.VARIABLE }?.name?.let(::isSuperglobal) == true
+
+        /**
+         * Like [cleansEveryElement] but the cleaned container is an expression (a superglobal element,
+         * matched by its canonical element key) rather than a bare variable: every `container[$key]` in
+         * the loop is overwritten by a sanitizer call.
+         */
+        fun cleansEveryElementOf(loop: AstNode, container: AstNode, key: String): Boolean {
+            val containerKey = elementKey(container) ?: return false
+            return loop.walk().any { a ->
+                a.kind == AstKind.ASSIGNMENT && a.child(AstRole.TARGET)?.let { t ->
+                    t.kind == AstKind.ARRAY_ACCESS &&
+                        t.child(AstRole.RECEIVER)?.let(::elementKey) == containerKey &&
+                        t.child(AstRole.KEY)?.name == key
+                } == true && a.child(AstRole.VALUE)?.let { v -> v.kind == AstKind.CALL && v.name?.lowercase() in spec.sanitizerFunctions } == true
+            }
         }
 
         fun elementPrefix(name: String) = "$name["
@@ -242,8 +280,11 @@ class TaintAnalyzer(
             ) null else {
                 val receiver = n.child(AstRole.RECEIVER)
                 val global = receiver?.takeIf { it.kind == AstKind.VARIABLE }?.name?.takeIf(::isSuperglobal)
-                val element = elementKey(n)?.let { env[it] }
+                val ek = elementKey(n)
+                val element = ek?.let { env[it] }
                 when {
+                    // A superglobal element sanitized in place by an earlier foreach reads clean.
+                    ek != null && ek in sanitizedGlobalElems -> null
                     global != null -> superglobal(global, n.child(AstRole.KEY)?.stringValue, keyed = true)
                     element != null -> element.takeIf { it.sources.isNotEmpty() }
                     else -> receiver?.let(::eval)

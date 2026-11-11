@@ -5,6 +5,13 @@ function p_interpolated() {
     $wpdb->query(<error descr="SQL built from request data ($_GET) reaches $wpdb->query() without $wpdb->prepare() placeholders">"DELETE FROM t WHERE id = $id"</error>);
 }
 
+// No in-place sanitize: the raw superglobal array is joined straight into SQL. Must still flag.
+function p_implode_superglobal_raw() {
+    global $wpdb;
+    $list = implode(',', $_REQUEST['id']);
+    $wpdb->query(<error descr="SQL built from request data ($_REQUEST) reaches $wpdb->query() without $wpdb->prepare() placeholders">'DELETE FROM t WHERE id IN (' . $list . ')'</error>);
+}
+
 function p_sanitize_text_field_is_not_sql_safe() {
     global $wpdb;
     $name = sanitize_text_field(wp_unslash($_POST['name']));

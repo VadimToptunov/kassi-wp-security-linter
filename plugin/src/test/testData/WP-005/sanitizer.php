@@ -7,6 +7,17 @@ function s_esc_sql() { global $wpdb; $n = esc_sql($_GET['n']); $wpdb->query("DEL
 function s_sprintf_numeric() { global $wpdb; $wpdb->query(sprintf("DELETE FROM t WHERE id = %d", $_GET['id'])); }
 function s_reassigned() { global $wpdb; $id = $_GET['id']; $id = intval($id); $wpdb->query("DELETE FROM t WHERE id = $id"); }
 
+// google-captcha allowlist.php pattern: a foreach sanitizes every element of a superglobal array IN
+// PLACE before implode, so the joined list is all-int. Clean.
+function s_foreach_superglobal_inplace() {
+    global $wpdb;
+    foreach ($_REQUEST['id'] as $key => $value) {
+        $_REQUEST['id'][$key] = absint($value);
+    }
+    $list = implode(',', $_REQUEST['id']);
+    $wpdb->query('DELETE FROM `wp_allowlist` WHERE `id` IN (' . $list . ');');
+}
+
 // Allow-list guards (LiteSpeed Cache db-optm pattern): clean inside the guarded branch...
 function s_allowlist_branch() {
     global $wpdb;
