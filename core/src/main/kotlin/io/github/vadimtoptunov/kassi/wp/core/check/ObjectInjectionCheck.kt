@@ -8,8 +8,9 @@ import io.github.vadimtoptunov.kassi.wp.core.model.Rule
 
 /**
  * WP-009: request input (including cookies) reaches `unserialize()` / `maybe_unserialize()`
- * (params `sink_functions`). `unserialize($x, ['allowed_classes' => false])` is not a sink:
- * without classes no object, so no POP chain.
+ * (params `sink_functions`). Not a sink when `allowed_classes` admits no attacker-chosen class:
+ * `=> false` (no object at all) or a bounded literal list of class-name strings (only those exact
+ * classes, so the payload cannot introduce a POP gadget). `=> true` or a dynamic value stays a sink.
  */
 class ObjectInjectionCheck(rule: Rule) : TaintCheck(rule) {
     private val sinks = rule.params.strings("sink_functions").map { it.lowercase() }.toSet()
@@ -22,9 +23,26 @@ class ObjectInjectionCheck(rule: Rule) : TaintCheck(rule) {
 
     private fun disallowsClasses(options: AstNode?): Boolean =
         options?.kind == AstKind.ARRAY_LITERAL && options.arguments.any { e ->
-            e.child(AstRole.KEY)?.stringValue == "allowed_classes" &&
-                e.child(AstRole.VALUE)?.let { it.kind == AstKind.CONSTANT && it.name.equals("false", ignoreCase = true) } == true
+            e.child(AstRole.KEY)?.stringValue == "allowed_classes" && allowedClassesSafe(e.child(AstRole.VALUE))
         }
+
+    /**
+     * `allowed_classes` admits no attacker-chosen class when it is `false` (no objects at all) OR a
+     * bounded literal list of class-name strings: only those exact classes can be instantiated, so the
+     * payload cannot introduce an arbitrary POP gadget. `true` (every class) or a dynamic value
+     * (variable / call) stays a sink.
+     */
+    private fun allowedClassesSafe(value: AstNode?): Boolean {
+        if (value == null) return false
+        if (value.kind == AstKind.CONSTANT && value.name.equals("false", ignoreCase = true)) return true
+        if (value.kind == AstKind.ARRAY_LITERAL) {
+            return value.arguments.all { el ->
+                val v = el.child(AstRole.VALUE) ?: el
+                v.kind == AstKind.STRING_LITERAL
+            }
+        }
+        return false
+    }
 
     override fun message(sink: AstNode, taint: Taint): String =
         "Request data (${taint.label}) reaches ${sink.name}(): PHP object injection. Use json_decode(), " +
