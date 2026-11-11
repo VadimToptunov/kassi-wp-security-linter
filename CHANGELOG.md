@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.3.0 (2026-11-11)
+
+New inspections since 1.0.0, each backed by real CVE cases in kassi-wp-corpus:
+- WP-014: Cross-plugin PHP object injection — a POP gadget chain reachable across plugins (CWE-502).
+- WP-015: OS command injection — request data reaches `exec`/`shell_exec`/`system`/`proc_open`/backticks (CWE-78).
+- WP-016: PHP code injection — request data reaches `eval()` or a dynamic include/callable (CWE-94).
+- Joomla security pack: JL-005 (SQL injection), JL-006 (reflected XSS), JL-007 (local file inclusion),
+  with an unauthenticated-reachability chain detector for file sinks.
+
+Precision:
+- Cross-file resolution: a handler whose capability or nonce gate lives in a separate helper file is
+  no longer a false positive (WP-001 / WP-002 / WP-003).
+- WP-009: a bounded `allowed_classes` list — `unserialize($x, ['allowed_classes' => ['A', 'B']])` —
+  and the empty list are recognised as safe, not only `['allowed_classes' => false]`.
+- WP-012: field-level taint of role/capability keys; a ternary allow-list or type guard cleans the
+  protected branch.
+
+Supports PhpStorm 2025.3 and later. No network calls, no telemetry.
+
 ## 1.0.0 (2026-10-22)
 
 First release.
