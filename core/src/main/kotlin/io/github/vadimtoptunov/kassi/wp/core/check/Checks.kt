@@ -54,7 +54,7 @@ object Checks {
         "WP-003" to { rule ->
             HookHandlerCheck(rule) { h, hook, sink, weak ->
                 "Unauthenticated handler ${HookHandlerCheck.Labels.handlerLabel(h)} (hook $hook) calls $sink() with no capability check: anyone can trigger it" +
-                    if (weak) ". Low impact: it only writes notice/onboarding-style state" else ""
+                    if (weak) ". Weak: a per-plugin request gate (token/apikey validator), or a low-impact notice/onboarding write, is present" else ""
             }
         },
     )
