@@ -2,6 +2,7 @@ package io.github.vadimtoptunov.kassi.wp.core.check
 
 import io.github.vadimtoptunov.kassi.wp.core.ast.AstKind
 import io.github.vadimtoptunov.kassi.wp.core.ast.AstNode
+import io.github.vadimtoptunov.kassi.wp.core.ast.ancestors
 import io.github.vadimtoptunov.kassi.wp.core.ast.walk
 import io.github.vadimtoptunov.kassi.wp.core.flow.Taint
 import io.github.vadimtoptunov.kassi.wp.core.flow.TaintAnalyzer
@@ -57,6 +58,17 @@ abstract class TaintCheck(protected val rule: Rule) : FileCheck {
     private fun argumentVariables(arg: AstNode): Set<String> =
         arg.walk().filter { it.kind == AstKind.VARIABLE }.mapNotNull { it.name }.toSet()
 
+    /**
+     * A method of a `*_List_Table` subclass renders only inside a wp-admin screen — the menu page
+     * that instantiates it is itself capability-gated — so its sinks are reachable only by a
+     * privileged user, and the finding is weak. `extends` is not a structured AST node (the adapters
+     * drop it), so read the enclosing class declaration's header text, which spans `class X extends
+     * Y {`. Covers WP_List_Table, WP_Posts_List_Table, and plugin subclasses named `*_List_Table`.
+     */
+    private fun inAdminScreenClass(scope: AstNode): Boolean =
+        scope.ancestors().firstOrNull { it.kind == AstKind.CLASS }
+            ?.let { ADMIN_SCREEN_BASE.containsMatchIn(it.text.substringBefore('{')) } == true
+
     /** Argument nodes of [node] that are sinks for this rule; empty when [node] is not a sink. */
     protected abstract fun sinkArguments(node: AstNode): List<AstNode>
 
@@ -70,16 +82,22 @@ abstract class TaintCheck(protected val rule: Rule) : FileCheck {
             val calls = HandlerFacts.callsIn(scope)
             val gated = adminChecks.isNotEmpty() && calls.any { c -> adminChecks.any { it.matches(c) } }
             val nonced = nonceChecks.isNotEmpty() && calls.any { c -> nonceChecks.any { it.matches(c) } }
+            val adminScreen = inAdminScreenClass(scope)
             val guardedVars = if (weakIfGuarded && guardFunctions.isNotEmpty()) guardedVariables(scope) else emptySet()
             analyzer.analyze(scope, ::sinkArguments).map { hit ->
                 val guarded = guardedVars.isNotEmpty() && argumentVariables(hit.argument).any { it in guardedVars }
                 val suffix = when {
                     gated -> ". Weak: the function checks a capability, so only privileged users reach it"
+                    adminScreen -> ". Weak: it runs in a WP_List_Table (a wp-admin screen), so only a privileged user reaches it"
                     nonced -> ". Weak: the function verifies a nonce, so a crafted link alone cannot trigger it"
                     guarded -> ". Weak: the value is checked against an allow-list in this function, so this is likely intentional"
                     else -> ""
                 }
-                Finding(rule.id, hit.argument, message(hit.sink, hit.taint) + suffix, weak = gated || nonced || guarded, quickFix = quickFix(hit.sink))
+                Finding(rule.id, hit.argument, message(hit.sink, hit.taint) + suffix, weak = gated || nonced || guarded || adminScreen, quickFix = quickFix(hit.sink))
             }
         }
+
+    private companion object {
+        val ADMIN_SCREEN_BASE = Regex("""\bextends\s+\\?[A-Za-z0-9_\\]*List_Table\b""", RegexOption.IGNORE_CASE)
+    }
 }
