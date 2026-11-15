@@ -45,6 +45,9 @@ class HookHandlerCheck(
     private val endpointPrefixes = rule.params.strings("endpoint_prefixes")
     private val weakIfCalled = CallTarget.parseAll(rule.params.strings("weak_if_called"))
     private val lowImpact = rule.params.strings("low_impact_keys").firstOrNull()?.let { Regex(it, RegexOption.IGNORE_CASE) }
+    private val detectCustomGates = rule.params.bool("detect_custom_gates")
+    private val gateTerminators = rule.params.strings("gate_terminators").map { it.lowercase() }.toSet()
+        .ifEmpty { setOf("wp_die", "die", "exit", "wp_send_json", "wp_send_json_error", "wp_send_json_success") }
 
     init {
         require(prefixes.isNotEmpty() && sinks.isNotEmpty() && checks.isNotEmpty()) {
@@ -105,8 +108,37 @@ class HookHandlerCheck(
         if (facts.anyMatch(checks)) return null
         val sink = facts.firstMatch(sinks) { call -> isSelfScoped(call, handler) } ?: return null
         val label = sinks.first { it.matches(sink) }.label
-        val weak = (weakIfCalled.isNotEmpty() && facts.anyMatch(weakIfCalled)) || lowImpactOnly(facts, handler)
+        val weak = (weakIfCalled.isNotEmpty() && facts.anyMatch(weakIfCalled)) || lowImpactOnly(facts, handler) ||
+            (detectCustomGates && hasCustomGate(handler, callables))
         return Finding(rule.id, handler, message(handler, reg.hook, label, weak), weak = weak)
+    }
+
+    /**
+     * A per-plugin gate the named-check list can't name: an `if` whose condition is a check (a call
+     * such as a token/apikey validator, or a comparison like `$this->token === $token`) and whose
+     * then/else reaches a request terminator — in the handler's own body (`if (!apikey()) {
+     * wp_send_json_error(...); }`) or in a one-level helper it calls (a `valid_token()` that
+     * `respond_json_and_die()`s on a bad token). The sink is still reported, but weak: some request
+     * validation is present, so it is not a clean unauthenticated path. Opt-in (`detect_custom_gates`),
+     * so only the missing-authorization rule (WP-003) — the one dominated by these — uses it.
+     */
+    private fun hasCustomGate(handler: AstNode, callables: Callables): Boolean {
+        val scopes = listOf(handler) + HandlerFacts.callsIn(handler)
+            .mapNotNull { callables.resolveCall(it) }.filter { it != handler }.distinct()
+        return scopes.any { scope ->
+            (scope.child(AstRole.BODY) ?: scope).walk().any { n ->
+                n.kind == AstKind.IF && conditionIsCheck(n.child(AstRole.CONDITION)) && reachesTerminator(n)
+            }
+        }
+    }
+
+    /** The condition tests something — a call (custom validator) or a comparison — not a bare flag. */
+    private fun conditionIsCheck(cond: AstNode?): Boolean =
+        cond?.walk()?.any { it.kind.isCall || it.kind == AstKind.BINARY } == true
+
+    /** The `if` subtree (then or else) aborts the request via a terminator call. */
+    private fun reachesTerminator(ifNode: AstNode): Boolean = ifNode.walk().any { n ->
+        n.kind.isCall && n.name?.lowercase()?.let { it in gateTerminators || it.endsWith("_die") || it.endsWith("_and_die") } == true
     }
 
     /** Every sink the handler reaches writes a low-impact key (e.g. `update_option('x_notice_dismissed', 1)`). */
