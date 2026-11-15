@@ -3,6 +3,7 @@ package io.github.vadimtoptunov.kassi.wp.core.check
 import io.github.vadimtoptunov.kassi.wp.core.ast.AstKind
 import io.github.vadimtoptunov.kassi.wp.core.ast.AstNode
 import io.github.vadimtoptunov.kassi.wp.core.ast.AstRole
+import io.github.vadimtoptunov.kassi.wp.core.ast.walk
 import io.github.vadimtoptunov.kassi.wp.core.flow.TaintAnalyzer
 import io.github.vadimtoptunov.kassi.wp.core.flow.TaintSpec
 import io.github.vadimtoptunov.kassi.wp.core.hooks.CallTarget
@@ -32,7 +33,7 @@ class UnsafeUploadCheck(private val rule: Rule) : FileCheck {
         val gated = calls.any { c -> adminChecks.any { it.matches(c) } }
         val neutralised = calls.any { c -> neutralisers.any { it.matches(c) } }
         calls.filter { it.kind == AstKind.CALL && it.name?.lowercase() in sinks }
-            .filterNot { fixedExtension(it.arguments.getOrNull(destArg)) }
+            .filterNot { fixedExtension(it.arguments.getOrNull(destArg), scope) }
             .map { call ->
                 Finding(
                     rule.id, call,
@@ -48,14 +49,30 @@ class UnsafeUploadCheck(private val rule: Rule) : FileCheck {
             }
     }
 
-    private fun fixedExtension(dest: AstNode?): Boolean {
-        val last = when (dest?.kind) {
-            AstKind.STRING_LITERAL, AstKind.INTERPOLATED_STRING -> dest
-            AstKind.CONCAT -> generateSequence(dest) { it.takeIf { n -> n.kind == AstKind.CONCAT }?.child(AstRole.RIGHT) }.last()
+    private fun fixedExtension(dest: AstNode?, scope: AstNode): Boolean {
+        val expr = resolveDest(dest, scope)
+        val last = when (expr?.kind) {
+            AstKind.STRING_LITERAL, AstKind.INTERPOLATED_STRING -> expr
+            AstKind.CONCAT -> generateSequence(expr) { it.takeIf { n -> n.kind == AstKind.CONCAT }?.child(AstRole.RIGHT) }.last()
             else -> null
         } ?: return false
         val tail = last.stringValue ?: return false
         return EXT.containsMatchIn(tail) && (last.kind == AstKind.STRING_LITERAL || !tail.substringAfterLast('.').contains('$'))
+    }
+
+    /**
+     * The destination is often built into a variable first (`$dest = $dir . wp_generate_uuid4() .
+     * '.csv'; move_uploaded_file($tmp, $dest);`). Resolve such a variable to the value it is assigned,
+     * but only when it is assigned exactly once in the scope — a conditional re-assignment (one branch
+     * the uploader's own name) must stay a sink, not be silenced.
+     */
+    private fun resolveDest(dest: AstNode?, scope: AstNode): AstNode? {
+        if (dest?.kind != AstKind.VARIABLE || dest.name == null) return dest
+        val assigns = scope.walk().filter { n ->
+            n.kind == AstKind.ASSIGNMENT &&
+                n.child(AstRole.TARGET)?.let { it.kind == AstKind.VARIABLE && it.name == dest.name } == true
+        }.toList()
+        return if (assigns.size == 1) assigns.single().child(AstRole.VALUE) else dest
     }
 
     companion object {
