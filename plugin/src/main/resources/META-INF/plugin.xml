@@ -30,6 +30,7 @@
       <li><b>WP-015</b> Request data used as an OS command in <code>exec()</code>, <code>system()</code>, <code>shell_exec()</code>, <code>passthru()</code>, <code>popen()</code> or <code>proc_open()</code> (CWE-78)</li>
       <li><b>WP-016</b> Request data evaluated as PHP code by <code>eval()</code>, <code>assert()</code> or <code>create_function()</code> (CWE-94)</li>
       <li><b>WP-017</b> Request data in the <code>$headers</code> argument of <code>wp_mail()</code>/<code>mail()</code> without CR/LF removal, i.e. email header injection (CWE-93)</li>
+      <li><b>WP-018</b> Request data in PHP <code>header()</code> without CR/LF removal, i.e. HTTP response header injection (CWE-113)</li>
     </ul>
     <h3>Joomla inspections</h3>
     <ul>
@@ -63,6 +64,9 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p><b>1.5.0</b>: new inspection <b>WP-018</b> — HTTP response header injection (CWE-113). Flags request
+    data that reaches PHP <code>header()</code> without CR/LF removal (<code>sanitize_text_field()</code>/
+    <code>sanitize_key()</code> are the fix). Anchored to CVE-2026-2811 (Ajaxify Comments).</p>
     <p><b>1.4.0</b>: new inspection <b>WP-017</b> — email header injection (CWE-93). Flags request data
     that reaches the <code>$headers</code> argument of <code>wp_mail()</code> or <code>mail()</code>
     without CR/LF removal (<code>sanitize_text_field()</code>/<code>sanitize_email()</code> are the fix).
@@ -158,6 +162,10 @@
                          displayName="WP-017 Request data in an email header (header injection)"
                          groupName="Kassi WordPress Security" enabledByDefault="true" level="ERROR"
                          implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP017MailHeaderInjectionInspection"/>
+        <localInspection language="PHP" shortName="WP018HttpHeaderInjection"
+                         displayName="WP-018 Request data in an HTTP response header (header injection)"
+                         groupName="Kassi WordPress Security" enabledByDefault="true" level="ERROR"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP018HttpHeaderInjectionInspection"/>
         <localInspection language="PHP" shortName="JL005UnpreparedSql"
                          displayName="JL-005 SQL built from request data without $db-&gt;quote()/escape()"
                          groupName="Kassi Joomla Security" enabledByDefault="true" level="ERROR"

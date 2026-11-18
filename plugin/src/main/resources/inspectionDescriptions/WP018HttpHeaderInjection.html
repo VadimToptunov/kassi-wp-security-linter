@@ -1,0 +1,27 @@
+<html>
+<body>
+<p>Reports request data (<code>$_GET</code>, <code>$_POST</code>, <code>$_REQUEST</code>,
+<code>$_COOKIE</code>, REST parameters) that reaches PHP <code>header()</code> without removing CR/LF
+(CWE-113, HTTP response header injection / response splitting).</p>
+<p>A carriage return or line feed left in that value lets an attacker add their own response headers or
+split the response &mdash; setting cookies, poisoning caches, or injecting a second response body. This
+is effective on PHP&nbsp;7 and earlier, where <code>header()</code> did not reject line breaks.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>header( 'X-Status: ' . $_GET['status'] );</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>// sanitize_text_field() removes line breaks.
+$status = sanitize_text_field( wp_unslash( $_GET['status'] ) );
+header( 'X-Status: ' . $status );</code></pre>
+
+<p><code>sanitize_text_field()</code>, <code>sanitize_key()</code> and an <code>(int)</code> cast remove
+the line breaks and are treated as safe. <code>esc_url_raw()</code>, <code>esc_html()</code> and
+<code>str_replace()</code> do <b>not</b>, on their own, remove an interior CR/LF and are not accepted.
+A <code>Location:</code> header built from request data via <code>wp_redirect()</code> is reported by
+WP-008 (open redirect) instead. A capability check in the same function lowers the severity. The flow is
+followed inside one function only.</p>
+<!-- tooltip end -->
+<p>Rule WP-018 &middot; CWE-113 &middot; see the kassi-wp-rules repository for references.</p>
+</body>
+</html>
