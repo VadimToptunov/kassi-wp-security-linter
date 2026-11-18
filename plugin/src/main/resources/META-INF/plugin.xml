@@ -31,6 +31,7 @@
       <li><b>WP-016</b> Request data evaluated as PHP code by <code>eval()</code>, <code>assert()</code> or <code>create_function()</code> (CWE-94)</li>
       <li><b>WP-017</b> Request data in the <code>$headers</code> argument of <code>wp_mail()</code>/<code>mail()</code> without CR/LF removal, i.e. email header injection (CWE-93)</li>
       <li><b>WP-018</b> Request data in PHP <code>header()</code> without CR/LF removal, i.e. HTTP response header injection (CWE-113)</li>
+      <li><b>WP-019</b> Request data used as the callable in <code>call_user_func()</code>/<code>call_user_func_array()</code> without an allow-list, i.e. arbitrary function invocation (CWE-94)</li>
     </ul>
     <h3>Joomla inspections</h3>
     <ul>
@@ -64,6 +65,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <p><b>1.6.0</b>: new inspection <b>WP-019</b> — dynamic callback / arbitrary function invocation
+    (CWE-94). Flags request data used as the callable in <code>call_user_func()</code> or
+    <code>call_user_func_array()</code> without an allow-list (<code>sanitize_text_field()</code> does not
+    make a callable safe; only an <code>in_array()</code> allow-list does). Anchored to CVE-2026-1929
+    (Advanced Woo Labels).</p>
     <p><b>1.5.0</b>: new inspection <b>WP-018</b> — HTTP response header injection (CWE-113). Flags request
     data that reaches PHP <code>header()</code> without CR/LF removal (<code>sanitize_text_field()</code>/
     <code>sanitize_key()</code> are the fix). Anchored to CVE-2026-2811 (Ajaxify Comments).</p>
@@ -166,6 +172,10 @@
                          displayName="WP-018 Request data in an HTTP response header (header injection)"
                          groupName="Kassi WordPress Security" enabledByDefault="true" level="ERROR"
                          implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP018HttpHeaderInjectionInspection"/>
+        <localInspection language="PHP" shortName="WP019CallbackInjection"
+                         displayName="WP-019 Request data used as a dynamic callable (arbitrary function invocation)"
+                         groupName="Kassi WordPress Security" enabledByDefault="true" level="ERROR"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP019CallbackInjectionInspection"/>
         <localInspection language="PHP" shortName="JL005UnpreparedSql"
                          displayName="JL-005 SQL built from request data without $db-&gt;quote()/escape()"
                          groupName="Kassi Joomla Security" enabledByDefault="true" level="ERROR"
