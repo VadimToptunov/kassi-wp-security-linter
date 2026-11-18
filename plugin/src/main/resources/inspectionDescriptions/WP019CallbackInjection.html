@@ -1,0 +1,31 @@
+<html>
+<body>
+<p>Reports request data (<code>$_GET</code>, <code>$_POST</code>, <code>$_REQUEST</code>,
+<code>$_COOKIE</code>, REST parameters) that reaches the callable argument of
+<code>call_user_func()</code> or <code>call_user_func_array()</code> (CWE-94, arbitrary function
+invocation).</p>
+<p>The attacker then chooses which PHP function runs &mdash; often remote code execution (for example
+calling <code>system</code>, <code>assert</code>, or a sensitive WordPress function).</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>$callback = sanitize_text_field( $_POST['callback'] );
+call_user_func_array( $callback, $args );</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>$callback = sanitize_text_field( $_POST['callback'] );
+$allowed  = array( 'my_plugin_get_cats', 'my_plugin_get_tags' );
+if ( ! in_array( $callback, $allowed, true ) ) {
+    wp_send_json_error( 'Invalid callback.' );
+}
+call_user_func_array( $callback, $args );</code></pre>
+
+<p>There is no string sanitiser that makes a request-chosen callable safe &mdash;
+<code>sanitize_text_field()</code> / <code>sanitize_key()</code> clean the string but do not stop it from
+naming a dangerous function, so they are <b>not</b> accepted. The clean paths are an
+<code>in_array()</code> allow-list of the callable against known callbacks, or a literal / non-request
+value. A capability check in the same function lowers the severity. The flow is followed inside one
+function only.</p>
+<!-- tooltip end -->
+<p>Rule WP-019 &middot; CWE-94 &middot; see the kassi-wp-rules repository for references.</p>
+</body>
+</html>

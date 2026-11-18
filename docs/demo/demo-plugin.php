@@ -122,6 +122,12 @@ function demo_status_header() {
 	header( 'X-Demo-Status: ' . $_GET['status'] );
 }
 
+// WP-019: request data used as the callable in call_user_func_array() without an allow-list (arbitrary function invocation).
+function demo_dynamic_callback() {
+	$callback = sanitize_text_field( $_POST['callback'] );
+	return call_user_func_array( $callback, array() );
+}
+
 // JL-005 (Joomla): request input reaches $db->setQuery() without $db->quote() or an (int) cast.
 function demo_joomla_find() {
 	$db    = Factory::getDbo();

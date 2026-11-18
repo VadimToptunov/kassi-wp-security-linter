@@ -36,6 +36,7 @@ object Checks {
         "WP-016" to ::CodeInjectionCheck,
         "WP-017" to ::MailHeaderInjectionCheck,
         "WP-018" to ::HttpHeaderInjectionCheck,
+        "WP-019" to ::CallbackInjectionCheck,
         // Joomla pack (reuses the param-driven checks). JL-005: $db->setQuery() SQLi;
         // JL-006: reflected XSS (echo of request input); JL-007: LFI / path traversal.
         "JL-005" to ::SqlInjectionCheck,
