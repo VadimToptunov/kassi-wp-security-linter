@@ -1,0 +1,28 @@
+<html>
+<body>
+<p>Reports request data (<code>$_GET</code>, <code>$_POST</code>, <code>$_REQUEST</code>,
+<code>$_COOKIE</code>, REST parameters) that reaches the <code>$headers</code> argument of
+<code>wp_mail()</code> or PHP <code>mail()</code> without removing CR/LF (CWE-93, email header
+injection).</p>
+<p>A carriage return or line feed left in that value lets an attacker add their own headers &mdash; a
+<code>Bcc:</code>/<code>Cc:</code> to an arbitrary recipient, or a forged <code>From:</code> &mdash;
+turning the site into an open relay for spam or phishing.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>$headers = 'Reply-To: ' . $_POST['email'];
+wp_mail( $to, $subject, $body, $headers );</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>// sanitize_text_field() and sanitize_email() strip line breaks.
+$headers = 'Reply-To: ' . sanitize_email( $_POST['email'] );
+wp_mail( $to, $subject, $body, $headers );</code></pre>
+
+<p><code>sanitize_text_field()</code> and <code>sanitize_email()</code> remove the line breaks and are
+treated as safe. <code>trim()</code>, <code>str_replace()</code>, <code>wp_strip_all_tags()</code> and
+<code>sanitize_textarea_field()</code> do <b>not</b> remove an interior CR/LF and are not accepted. Only
+the headers argument is inspected; a capability check in the same function lowers the severity. The flow
+is followed inside one function only.</p>
+<!-- tooltip end -->
+<p>Rule WP-017 &middot; CWE-93 &middot; see the kassi-wp-rules repository for references.</p>
+</body>
+</html>

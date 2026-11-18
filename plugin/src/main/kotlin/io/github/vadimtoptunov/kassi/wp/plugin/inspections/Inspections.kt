@@ -22,6 +22,7 @@ object Inspections {
             WP014PopChainInspection.RULE_ID to WP014PopChainInspection(),
             WP015CommandInjectionInspection.RULE_ID to WP015CommandInjectionInspection(),
             WP016CodeInjectionInspection.RULE_ID to WP016CodeInjectionInspection(),
+            WP017MailHeaderInjectionInspection.RULE_ID to WP017MailHeaderInjectionInspection(),
             // Joomla pack
             JL005UnpreparedSqlInspection.RULE_ID to JL005UnpreparedSqlInspection(),
             JL006UnescapedOutputInspection.RULE_ID to JL006UnescapedOutputInspection(),

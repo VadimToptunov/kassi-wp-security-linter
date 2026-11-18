@@ -110,6 +110,13 @@ function demo_calc_eval() {
 	return $result;
 }
 
+// WP-017: request data reaches the $headers argument of wp_mail() without CR/LF removal (email header injection).
+function demo_contact_reply_to() {
+	$reply_to = $_POST['email'];
+	$headers = "Reply-To: $reply_to\r\n";
+	wp_mail( get_option( 'admin_email' ), 'New message', 'See the form entry.', $headers );
+}
+
 // JL-005 (Joomla): request input reaches $db->setQuery() without $db->quote() or an (int) cast.
 function demo_joomla_find() {
 	$db    = Factory::getDbo();
