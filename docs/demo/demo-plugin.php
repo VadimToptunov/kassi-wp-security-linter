@@ -117,6 +117,11 @@ function demo_contact_reply_to() {
 	wp_mail( get_option( 'admin_email' ), 'New message', 'See the form entry.', $headers );
 }
 
+// WP-018: request data reaches PHP header() without CR/LF removal (HTTP response header injection).
+function demo_status_header() {
+	header( 'X-Demo-Status: ' . $_GET['status'] );
+}
+
 // JL-005 (Joomla): request input reaches $db->setQuery() without $db->quote() or an (int) cast.
 function demo_joomla_find() {
 	$db    = Factory::getDbo();
