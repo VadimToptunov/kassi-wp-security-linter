@@ -30,6 +30,12 @@ class CorpusAcceptanceTest : BasePlatformTestCase() {
             assertFalse("${rule.id}: no corpus case", referenced.isEmpty())
             assertEquals("${rule.id}: references and corpus cases differ", onDisk, referenced)
 
+            // WP-020's real engine is plugin-wide (bounty-pipeline's StoredXssCheck): writer and
+            // reader almost always live in different files, so the per-file IDE inspection is a
+            // no-op. The corpus case is kept on disk as shape documentation; recall/precision are
+            // measured in the pipeline integration tests, not here.
+            if (rule.id == "WP-020") continue
+
             for (case in referenced.sorted()) {
                 val dir = File(corpus, case)
                 assertTrue("$case: vulnerable.php must produce a finding", findings(tool, File(dir, "vulnerable.php")) > 0)

@@ -1,0 +1,40 @@
+<html>
+<body>
+<p>Reports a cross-role stored XSS chain: request data (<code>$_GET</code>, <code>$_POST</code>,
+<code>$_REQUEST</code>, <code>$_COOKIE</code>, REST parameters, selected <code>$_SERVER[HTTP_*]</code>)
+written to a storage sink (<code>update_option</code>, <code>update_user_meta</code>,
+<code>update_post_meta</code>, <code>$wpdb-&gt;insert()</code>, <code>wp_insert_post()</code>) and
+later read back through the matching getter and echoed on an admin page without an escaper. Strong
+when the writer runs on a public hook (<code>wp_ajax_nopriv_*</code>, REST
+<code>permission_callback =&gt; __return_true</code>) and the reader sits behind a capability check;
+weak when the writer and reader share a cap tier (self-XSS).</p>
+
+<p>The real detector is plugin-wide and lives in the bounty-pipeline project
+(<code>StoredXssCheck</code>); the IDE keeps the rule registered for completeness.</p>
+
+<p><b>Vulnerable</b></p>
+<pre><code>// public writer
+add_action( 'wp_ajax_nopriv_p_save', 'p_save_html' );
+function p_save_html() {
+    update_option( 'p_html', $_POST['html'] );
+}
+
+// admin reader
+function p_render_settings() {
+    if ( ! current_user_can( 'manage_options' ) ) return;
+    echo get_option( 'p_html' );
+}</code></pre>
+
+<p><b>Fixed</b></p>
+<pre><code>function p_render_settings() {
+    if ( ! current_user_can( 'manage_options' ) ) return;
+    echo wp_kses_post( get_option( 'p_html' ) );
+}</code></pre>
+
+<p><code>sanitize_text_field</code> on the write side only strips tags; it keeps quotes, so a value
+echoed inside an HTML attribute can still break out (CVE-2024-11199 pattern). <code>wp_kses</code>,
+<code>wp_kses_post</code>, <code>esc_html</code>, <code>esc_attr</code>, <code>esc_url</code> on the
+read side are the safe choices.</p>
+
+</body>
+</html>

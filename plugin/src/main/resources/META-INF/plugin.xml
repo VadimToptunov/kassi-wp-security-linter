@@ -176,6 +176,10 @@
                          displayName="WP-019 Request data used as a dynamic callable (arbitrary function invocation)"
                          groupName="Kassi WordPress Security" enabledByDefault="true" level="ERROR"
                          implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP019CallbackInjectionInspection"/>
+        <localInspection language="PHP" shortName="WP020CrossRoleStoredXss"
+                         displayName="WP-020 Cross-role stored XSS (request input written to options/meta, read back and echoed)"
+                         groupName="Kassi WordPress Security" enabledByDefault="true" level="WARNING"
+                         implementationClass="io.github.vadimtoptunov.kassi.wp.plugin.inspections.WP020CrossRoleStoredXssInspection"/>
         <localInspection language="PHP" shortName="JL005UnpreparedSql"
                          displayName="JL-005 SQL built from request data without $db-&gt;quote()/escape()"
                          groupName="Kassi Joomla Security" enabledByDefault="true" level="ERROR"
