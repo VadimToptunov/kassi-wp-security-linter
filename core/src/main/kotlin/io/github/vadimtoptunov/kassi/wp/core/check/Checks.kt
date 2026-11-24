@@ -37,6 +37,11 @@ object Checks {
         "WP-017" to ::MailHeaderInjectionCheck,
         "WP-018" to ::HttpHeaderInjectionCheck,
         "WP-019" to ::CallbackInjectionCheck,
+        // WP-020 (cross-role stored XSS) is a plugin-wide two-pass check that needs every file of
+        // one plugin version at once — it cannot work on a single [AstNode]. The real engine lives
+        // in the bounty-pipeline (StoredXssCheck). The registry carries a no-op here so the
+        // RuleBaseTest passes and single-file runners stay silent on it.
+        "WP-020" to { _ -> FileCheck { _ -> emptyList() } },
         // Joomla pack (reuses the param-driven checks). JL-005: $db->setQuery() SQLi;
         // JL-006: reflected XSS (echo of request input); JL-007: LFI / path traversal.
         "JL-005" to ::SqlInjectionCheck,
