@@ -77,13 +77,17 @@ class SettingsAndReportTest : BasePlatformTestCase() {
         val report = GenerateReportAction.buildReport(project, null)
         assertEquals(1, report.filesScanned)
         val rulesFound = report.entries.map { it.rule.id }.toSet()
-        assertEquals(io.github.vadimtoptunov.kassi.wp.plugin.inspections.Inspections.byRuleId.keys, rulesFound)
-        assertEquals(22, report.rulesChecked.size)
+        // WP-020's real engine is plugin-wide (bounty-pipeline's StoredXssCheck): writer and
+        // reader almost always live in different files, so the per-file IDE inspection is a
+        // no-op and never fires on a single demo file. Pipeline tests cover its recall.
+        val expected = io.github.vadimtoptunov.kassi.wp.plugin.inspections.Inspections.byRuleId.keys - "WP-020"
+        assertEquals(expected, rulesFound)
+        assertEquals(23, report.rulesChecked.size)
     }
 
     fun testEmptyProjectStillListsTheRulesThatWouldBeChecked() {
         val report = GenerateReportAction.buildReport(project, null)
         assertEquals(0, report.filesScanned)
-        assertEquals(22, report.rulesChecked.size)
+        assertEquals(23, report.rulesChecked.size)
     }
 }
