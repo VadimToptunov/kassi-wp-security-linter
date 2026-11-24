@@ -397,9 +397,11 @@ class TaintAnalyzer(
             if (specs.isEmpty()) return null
             val hit = specs.any { s -> if (keyed) s.matchesKey(key) else s.keyPattern == null }
             if (!hit) return null
-            // Only a literal $_SERVER[HTTP_*] read counts as host-header-only. An unkeyed $_SERVER
-            // access or a dynamic $_SERVER[$k] could land on REQUEST_URI etc., so leave the flag off.
-            val hostOnly = name == "_SERVER" && keyed && key != null && key.startsWith("HTTP_")
+            // Only $_SERVER[HTTP_HOST] / $_SERVER[HTTP_X_FORWARDED_HOST] / HTTP_X_ORIGINAL_HOST count
+            // as host-header-only (reflected-XSS self-XSS class per keyring 3.0). HTTP_USER_AGENT,
+            // HTTP_REFERER, HTTP_X_FORWARDED_FOR etc. are directly attacker-controlled on their own
+            // request and stay strong.
+            val hostOnly = name == "_SERVER" && keyed && key in HOST_HEADER_KEYS
             return Taint(setOf("\$$name"), hostHeaderOnly = hostOnly)
         }
     }
@@ -407,6 +409,7 @@ class TaintAnalyzer(
     companion object {
         private val CLEAN = Taint(emptySet())
         private val HOST_PREFIX = Regex("""^[A-Za-z][A-Za-z0-9+.-]*://[^/?#'"\s]+[/?#]""")
+        private val HOST_HEADER_KEYS = setOf("HTTP_HOST", "HTTP_X_FORWARDED_HOST", "HTTP_X_ORIGINAL_HOST")
         private val COMPARISONS = setOf("==", "===", "!=", "!==", "<>")
         private val CLEAN_CASTS = setOf("int", "integer", "float", "double", "bool", "boolean")
         // %[argnum$][flags][width][.precision]specifier, plus %%.
