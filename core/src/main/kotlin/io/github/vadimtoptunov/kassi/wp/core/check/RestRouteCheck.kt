@@ -33,6 +33,8 @@ class RestRouteCheck(private val rule: Rule) {
     private val openCallbacks = rule.params.strings("open_permission_callbacks").map { it.lowercase() }.toSet()
     private val privilegedSinks = CallTarget.parseAll(rule.params.strings("privileged_sinks"))
     private val capabilityChecks = CallTarget.parseAll(rule.params.strings("capability_checks"))
+    private val oauthUnauthPaths = rule.params.strings("oauth_unauth_paths")
+        .map { it.lowercase().trimEnd('/').removePrefix("/") }
 
     init {
         require(readOnly.isNotEmpty() && defaultMethods.isNotEmpty()) {
@@ -44,6 +46,7 @@ class RestRouteCheck(private val rule: Rule) {
         if (call.kind != AstKind.CALL || call.name?.lowercase() !in registrars) return emptyList()
         val options = call.arguments.getOrNull(2) ?: return emptyList()
         if (options.kind != AstKind.ARRAY_LITERAL) return emptyList()
+        if (isOAuthUnauthPath(call.arguments.getOrNull(1))) return emptyList()
 
         val multi = endpointsOf(options)
         return if (multi != null) {
@@ -51,6 +54,18 @@ class RestRouteCheck(private val rule: Rule) {
         } else {
             listOfNotNull(checkEndpoint(options, reportOn = call))
         }
+    }
+
+    /**
+     * Route-path suffix match for OAuth 2.0 endpoints that are unauthenticated by RFC. For
+     * `register_rest_route('acme/v1', '/oauth/token', [...])` the arg is `'/oauth/token'` or just
+     * `'oauth/token'`; the server authenticates the client inside the handler (client_secret /
+     * PKCE / bearer), not at the permission_callback. Suppresses WP-004 outright on those paths.
+     */
+    private fun isOAuthUnauthPath(routeArg: AstNode?): Boolean {
+        if (oauthUnauthPaths.isEmpty() || routeArg?.kind != AstKind.STRING_LITERAL) return false
+        val route = routeArg.stringValue?.lowercase()?.trimEnd('/')?.removePrefix("/") ?: return false
+        return oauthUnauthPaths.any { suffix -> route == suffix || route.endsWith("/$suffix") }
     }
 
     /**
