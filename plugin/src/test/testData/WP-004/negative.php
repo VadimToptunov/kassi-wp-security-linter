@@ -30,6 +30,37 @@ register_rest_route('p/v1', '/e', [
     },
 ]);
 
+// OAuth 2.0 token endpoints authenticate the client inside the handler (client_secret / PKCE /
+// bearer), not at permission_callback — RFC 6749 §3.2, RFC 7009, RFC 7662, RFC 7591.
+register_rest_route('oauth/v1', '/oauth/token', [
+    'methods' => 'POST',
+    'callback' => 'p_oauth_token',
+    'permission_callback' => '__return_true',
+]);
+register_rest_route('oauth/v1', '/oauth/revoke', [
+    'methods' => 'POST',
+    'callback' => 'p_oauth_revoke',
+    'permission_callback' => '__return_true',
+]);
+register_rest_route('oauth/v1', '/oauth/introspect', [
+    'methods' => 'POST',
+    'callback' => 'p_oauth_introspect',
+    'permission_callback' => '__return_true',
+]);
+register_rest_route('oauth/v1', '/oauth/register', [
+    'methods' => 'POST',
+    'callback' => 'p_oauth_dcr',
+    'permission_callback' => '__return_true',
+]);
+
+// activitypub for WordPress ships a concat-built route path. The dynamic middle resolves to
+// 'oauth', the trailing literal is '/token' — a well-known OAuth tail. Still silent.
+register_rest_route($this->namespace, '/' . $this->rest_base . '/token', [
+    'methods' => WP_REST_Server::CREATABLE,
+    'callback' => [$this, 'token'],
+    'permission_callback' => '__return_true',
+]);
+
 // Not a REST registration.
 register_route('p/v1', '/f', ['methods' => 'POST']);
 $server->register_rest_route('p/v1', '/g', ['methods' => 'POST']);

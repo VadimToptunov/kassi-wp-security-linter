@@ -46,6 +46,15 @@ abstract class TaintCheck(protected val rule: Rule) : FileCheck {
     private val weakIfGuarded by lazy { rule.params.bool("weak_if_guarded") }
     private val guardFunctions by lazy { rule.params.strings("guard_functions").map { it.lowercase() }.toSet() }
 
+    /**
+     * `params.weak_if_host_header_only` (bool): when every contributing taint source is a literal
+     * `$_SERVER[HTTP_*]` read — most often `HTTP_HOST` echoed into an admin wizard — mark the
+     * finding weak. Exploitation needs a misconfigured catch-all vhost plus a forged request to a
+     * privileged victim, which most mature programs classify as self-XSS (>2 steps) / known-out.
+     * Reflected-XSS rules (WP-006) opt in.
+     */
+    private val weakIfHostHeaderOnly by lazy { rule.params.bool("weak_if_host_header_only") }
+
     /** First-argument variable names passed to a guard call anywhere in [scope]. */
     private fun guardedVariables(scope: AstNode): Set<String> =
         HandlerFacts.callsIn(scope)
@@ -86,14 +95,16 @@ abstract class TaintCheck(protected val rule: Rule) : FileCheck {
             val guardedVars = if (weakIfGuarded && guardFunctions.isNotEmpty()) guardedVariables(scope) else emptySet()
             analyzer.analyze(scope, ::sinkArguments).map { hit ->
                 val guarded = guardedVars.isNotEmpty() && argumentVariables(hit.argument).any { it in guardedVars }
+                val hostOnly = weakIfHostHeaderOnly && hit.taint.hostHeaderOnly
                 val suffix = when {
                     gated -> ". Weak: the function checks a capability, so only privileged users reach it"
                     adminScreen -> ". Weak: it runs in a WP_List_Table (a wp-admin screen), so only a privileged user reaches it"
                     nonced -> ". Weak: the function verifies a nonce, so a crafted link alone cannot trigger it"
                     guarded -> ". Weak: the value is checked against an allow-list in this function, so this is likely intentional"
+                    hostOnly -> ". Weak: the only source is \$_SERVER[HTTP_*] — needs a misconfigured host header plus a forged request, usually self-XSS"
                     else -> ""
                 }
-                Finding(rule.id, hit.argument, message(hit.sink, hit.taint) + suffix, weak = gated || nonced || guarded || adminScreen, quickFix = quickFix(hit.sink))
+                Finding(rule.id, hit.argument, message(hit.sink, hit.taint) + suffix, weak = gated || nonced || guarded || adminScreen || hostOnly, quickFix = quickFix(hit.sink))
             }
         }
 

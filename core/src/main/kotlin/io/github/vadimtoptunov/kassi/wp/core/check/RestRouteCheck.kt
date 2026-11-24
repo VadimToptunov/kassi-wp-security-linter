@@ -33,6 +33,12 @@ class RestRouteCheck(private val rule: Rule) {
     private val openCallbacks = rule.params.strings("open_permission_callbacks").map { it.lowercase() }.toSet()
     private val privilegedSinks = CallTarget.parseAll(rule.params.strings("privileged_sinks"))
     private val capabilityChecks = CallTarget.parseAll(rule.params.strings("capability_checks"))
+    private val oauthUnauthPaths = rule.params.strings("oauth_unauth_paths")
+        .map { it.lowercase().trimEnd('/').removePrefix("/") }
+    // Last segment of each full path (e.g. "oauth/token" → "token"). Used as a looser signal when the
+    // route arg is a string CONCAT: the rightmost literal is just the tail (`/token`), while the
+    // `oauth/` prefix sits in the dynamic middle expression (activitypub's `$this->rest_base`).
+    private val oauthLastSegments = oauthUnauthPaths.mapNotNull { it.substringAfterLast('/').ifEmpty { null } }.toSet()
 
     init {
         require(readOnly.isNotEmpty() && defaultMethods.isNotEmpty()) {
@@ -44,6 +50,7 @@ class RestRouteCheck(private val rule: Rule) {
         if (call.kind != AstKind.CALL || call.name?.lowercase() !in registrars) return emptyList()
         val options = call.arguments.getOrNull(2) ?: return emptyList()
         if (options.kind != AstKind.ARRAY_LITERAL) return emptyList()
+        if (isOAuthUnauthPath(call.arguments.getOrNull(1))) return emptyList()
 
         val multi = endpointsOf(options)
         return if (multi != null) {
@@ -51,6 +58,33 @@ class RestRouteCheck(private val rule: Rule) {
         } else {
             listOfNotNull(checkEndpoint(options, reportOn = call))
         }
+    }
+
+    /**
+     * Route-path suffix match for OAuth 2.0 endpoints that are unauthenticated by RFC. The server
+     * authenticates the client inside the handler (client_secret / PKCE / bearer), not at
+     * permission_callback. Catches two shapes:
+     *  - a plain string literal: `register_rest_route('oauth/v1', '/oauth/token', [...])`
+     *  - a concatenation whose rightmost literal is the path tail, which activitypub for WordPress
+     *    uses: `register_rest_route($this->namespace, '/' . $this->rest_base . '/token', [...])`.
+     *    In that case we match on the trailing literal only, which is still a strong OAuth signal
+     *    on a __return_true write route.
+     */
+    private fun isOAuthUnauthPath(routeArg: AstNode?): Boolean {
+        if (oauthUnauthPaths.isEmpty() || routeArg == null) return false
+        val tail = rightmostStringLiteral(routeArg)?.lowercase()?.trimEnd('/')?.removePrefix("/") ?: return false
+        if (oauthUnauthPaths.any { suffix -> tail == suffix || tail.endsWith("/$suffix") }) return true
+        // Fallback for CONCAT routes where the dynamic middle expression likely resolves to
+        // 'oauth' (activitypub-style): match the last segment alone (`token`, `revoke`, …).
+        return routeArg.kind == AstKind.CONCAT && tail in oauthLastSegments
+    }
+
+    private fun rightmostStringLiteral(node: AstNode): String? {
+        var cur: AstNode = node
+        while (cur.kind == AstKind.CONCAT) {
+            cur = cur.child(AstRole.RIGHT) ?: return null
+        }
+        return if (cur.kind == AstKind.STRING_LITERAL) cur.stringValue else null
     }
 
     /**

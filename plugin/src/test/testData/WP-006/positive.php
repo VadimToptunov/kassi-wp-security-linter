@@ -13,6 +13,24 @@ function p_self_link() {
     echo <warning descr="Request data ($_SERVER) is output without escaping (esc_html, esc_attr, esc_url, wp_kses)">'<a href="' . $u . '">'</warning>;
 }
 
+// Host-header reflection (keyring-style OAuth-setup page echoing the callback URL): weak, because
+// exploitation needs a misconfigured catch-all vhost plus a forged request to a privileged victim.
+function p_host_header_wizard() {
+    $host = $_SERVER['HTTP_HOST'];
+    echo <weak_warning descr="Request data ($_SERVER) is output without escaping (esc_html, esc_attr, esc_url, wp_kses). Weak: the only source is $_SERVER[HTTP_*] — needs a misconfigured host header plus a forged request, usually self-XSS">'<code>https://' . $host . '/oauth/callback</code>'</weak_warning>;
+}
+
+// User-Agent, Referer and X-Forwarded-For are directly attacker-controlled on each request, so a
+// reflected echo of them is NOT self-XSS. Stay strong — attacker sets their own UA / Referer.
+function p_user_agent_log() {
+    $ua = $_SERVER['HTTP_USER_AGENT'];
+    echo <warning descr="Request data ($_SERVER) is output without escaping (esc_html, esc_attr, esc_url, wp_kses)">'<p>UA: ' . $ua . '</p>'</warning>;
+}
+function p_referer_log() {
+    $ref = $_SERVER['HTTP_REFERER'];
+    echo <warning descr="Request data ($_SERVER) is output without escaping (esc_html, esc_attr, esc_url, wp_kses)">'<p>From: ' . $ref . '</p>'</warning>;
+}
+
 function p_guard_only_covers_its_branch() {
     $v = $_GET['v'];
     if (in_array($v, array('a', 'b'), true)) {
