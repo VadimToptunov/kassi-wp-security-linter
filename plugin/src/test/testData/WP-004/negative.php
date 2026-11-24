@@ -53,6 +53,14 @@ register_rest_route('oauth/v1', '/oauth/register', [
     'permission_callback' => '__return_true',
 ]);
 
+// activitypub for WordPress ships a concat-built route path. The dynamic middle resolves to
+// 'oauth', the trailing literal is '/token' — a well-known OAuth tail. Still silent.
+register_rest_route($this->namespace, '/' . $this->rest_base . '/token', [
+    'methods' => WP_REST_Server::CREATABLE,
+    'callback' => [$this, 'token'],
+    'permission_callback' => '__return_true',
+]);
+
 // Not a REST registration.
 register_route('p/v1', '/f', ['methods' => 'POST']);
 $server->register_rest_route('p/v1', '/g', ['methods' => 'POST']);
