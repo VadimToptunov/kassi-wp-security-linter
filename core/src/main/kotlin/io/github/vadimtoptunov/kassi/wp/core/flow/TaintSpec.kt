@@ -2,9 +2,16 @@ package io.github.vadimtoptunov.kassi.wp.core.flow
 
 import io.github.vadimtoptunov.kassi.wp.core.model.Rule
 
-/** A proven flow from untrusted input. [sources] are display labels such as `$_GET` or `->get_param()`. */
-data class Taint(val sources: Set<String>) {
-    operator fun plus(other: Taint?): Taint = if (other == null) this else Taint(sources + other.sources)
+/**
+ * A proven flow from untrusted input. [sources] are display labels such as `$_GET` or
+ * `->get_param()`. [hostHeaderOnly] is true when every source that contributed to this taint came
+ * from an `$_SERVER[HTTP_*]` read — a weak reflected-XSS signal (needs a catch-all vhost plus a
+ * forged request to a privileged victim, which most mature programs classify as self-XSS >2 steps).
+ * It flips to false on union with any non-host-header source.
+ */
+data class Taint(val sources: Set<String>, val hostHeaderOnly: Boolean = false) {
+    operator fun plus(other: Taint?): Taint = if (other == null) this else
+        Taint(sources + other.sources, hostHeaderOnly && other.hostHeaderOnly)
 
     val label: String get() = sources.sorted().joinToString(", ")
 

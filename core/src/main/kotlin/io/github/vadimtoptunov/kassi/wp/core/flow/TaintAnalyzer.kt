@@ -396,7 +396,11 @@ class TaintAnalyzer(
             val specs = spec.sources.filterIsInstance<SourceSpec.Superglobal>().filter { it.name == name }
             if (specs.isEmpty()) return null
             val hit = specs.any { s -> if (keyed) s.matchesKey(key) else s.keyPattern == null }
-            return if (hit) Taint(setOf("\$$name")) else null
+            if (!hit) return null
+            // Only a literal $_SERVER[HTTP_*] read counts as host-header-only. An unkeyed $_SERVER
+            // access or a dynamic $_SERVER[$k] could land on REQUEST_URI etc., so leave the flag off.
+            val hostOnly = name == "_SERVER" && keyed && key != null && key.startsWith("HTTP_")
+            return Taint(setOf("\$$name"), hostHeaderOnly = hostOnly)
         }
     }
 
